@@ -41,9 +41,9 @@ This file contains functions to work with the datasets.
 * remove_content(dataframe): Removes all content features.
 * remove_host_based(dataframe): Removes all host based features.
 * remove_time_based(dataframe): Removes all time based features.
-* get_content(): Gives the column names of the content features.
-* get_host_based(): Gives the column names of the host based features.
-* get_time_based(): Gives the column names of the time based features.
+* get_content_columns(): Gives the column names of the content features.
+* get_host_based_columns(): Gives the column names of the host based features.
+* get_time_based_columns(): Gives the column names of the time based features.
 
 Note: All of the functions, except the three getters, return (one or more) Pandas dataframes. Call .to_numpy() on the dataframe object to convert it to a NumPy array.
 
