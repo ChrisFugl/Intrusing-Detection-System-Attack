@@ -10,6 +10,8 @@ scipy = "*"
 pandas = "*"
 numpy = "*"
 ipykernel = "*"
+matplotlib = "*"
+sklearn = "*"
 
 [requires]
 python_version = "3.7"
