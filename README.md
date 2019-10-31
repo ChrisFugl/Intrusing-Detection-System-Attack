@@ -48,7 +48,7 @@ You are now up an running with the virtual environment. Run the following comman
 deactivate
 ```
 
-### Jupyter support (optional)
+### Jupyter Support (optional)
 The commands in this section should be run from inside of a virtual environment. Note that you only need to do these steps if you are using a virtual environment.
 
 Run this command:
@@ -64,6 +64,54 @@ jupyter notebook
 ```
 
 Select "IDSA" when creating a new notebook.
+
+## Structure
+The following is proposed for how to structure the codebase. The specific API of each file is to be decided after agreeing on a structure.
+
+**data/**: Directory containing the dataset.
+
+* **data/KDDTest.csv**: NSL-KDD full testset.
+* **data/KDDTrain.csv**: NSL-KDD full trainingset.
+
+**data.py** (already implemented): All functions needed to load and preprocess the data.
+
+**ids/**: Module containing model implementations for each of the IDS algorithms. Each model implementation should expose a class with (at least) a train and a test method. These methods are to be used by train_ids.py, test_ids.py, and test_wgan.py.
+
+* **decision_tree.py**: Implementation of decision tree based IDS.
+* **k_nearest_neighbours.py**: Implementation of K-nearest neighbours based IDS.
+* **linear_regression.py**: Implementation of linear regression based IDS.
+* **multi_layer_perceptron.py**: Implementation of multi-layer perceptron (fully connected neural network) based IDS.
+* **naive_bayes.py**: Implementation of Naive Bayes based IDS.
+* **random_forest.py**: Implementation of random forest based IDS.
+* **support_vector_machine.py**: Implementation of support vector machine based IDS.
+
+**model.py**: WGAN should be implemented as two classes (Generator and Discriminator) in this file.
+
+**test_ids.py**: Script for evaluating the performance of a pretrained IDS model. The IDS model parameters should be accepted as a command line argument. For example:
+
+``` sh
+python test_ids.py --ids saved_models/{IDS}.pt
+```
+
+**test_wgan.py**: Script for testing the performance of a pretrained WGAN against one of the pretrained IDS models. The script should accept command line arguments to specify which WGAN- and IDS parameters to use. For example:
+
+``` sh
+python test_wgan.py --wgan saved_models/{WGAN}.pt --ids saved_models/{IDS}.pt
+```
+
+**train_ids.py**: Script for training the IDS models on the NSL-KDS trainingset. Command line arguments should be used to control which IDS model to train and to control hyperparameters. For example:
+
+``` sh
+python train_ids.py --ids mlp --learning_rate 0.0001
+```
+
+**train_wgan.py**: Script for training the WGAN on the NSL-KDD trainingset. Command line arguments should be used to control the hyperparameters. For example:
+
+``` sh
+python train_wgan.py --learning_rate 0.0001
+```
+
+See [this site](https://pytorch.org/tutorials/beginner/saving_loading_models.html) for how to save and load models in PyTorch.
 
 ## API
 Overview of the API from each file. See the comments in the files for documentation of each function.
