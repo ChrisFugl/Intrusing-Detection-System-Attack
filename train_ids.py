@@ -5,11 +5,9 @@ import yaml
 
 def main():
     options = parse_arguments()
-    attributes_dataframe_train, _, attack_class_dataframe_train = preprocess(load_train())
-    attributes_train = attributes_dataframe_train.to_numpy()
-    attack_class_train = attack_class_dataframe_train.to_numpy()
+    attributes, attack_class = load_data(options)
     model = get_model(options)
-    model.train(attributes_train, attack_class_train)
+    model.train(attributes, attack_class)
 
     # save model
     if options.save_model is not None:
@@ -19,8 +17,9 @@ def parse_arguments():
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
-    parser.add('--algorithm', required=True, choices=['dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
+    parser.add('--algorithm', required=True, choices=['dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
+    parser.add('--attack_class', required=False, default=None, choices=['dos', 'probe', 'r2l'], help='selects features based on the attack class (defaults to select all features)')
     options = parser.parse_args()
 
     # remove keys that should not be saved to config file
@@ -34,6 +33,12 @@ def parse_arguments():
             yaml.dump(vars(options), config_file)
 
     return options
+
+def load_data(options):
+    attributes_dataframe, _, attack_class_dataframe = preprocess(load_train(), selected_attack_class=options.attack_class)
+    attributes = attributes_dataframe.to_numpy()
+    attack_class = attack_class_dataframe.to_numpy()
+    return attributes, attack_class
 
 def get_model(options):
     algorithm = options.algorithm

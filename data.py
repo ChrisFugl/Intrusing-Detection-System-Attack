@@ -99,25 +99,43 @@ def _add_attack_class(data):
     data['attack_class'] = column
     return data
 
-def preprocess(dataframe, normalize=True):
+def preprocess(
+        dataframe,
+        selected_attack_class=None,
+        normalize=True,
+        one_hot_encode_labels=True,
+    ):
     """
     Preprocesses data.
 
     Performs these operations:
+    * Removes features based on selected_attack_class
     * Removes rows with attack classes: U2R.
     * Normalize numeric attributes unless specified otherwise.
     * Splits data into: attributes, class, attack_class.
     * One-hot encodes columns: protocol_type, service, flag, class, attack_class.
 
-    :param dataframe: Data
+    :param dataframe: data
     :type dataframe: pd.DataFrame
-
-    :param normalize: Flag if the numerical attributes should be normalized (default true)
+    :param selected_attack_class: features are selected based on this (default to not removing any features)
+    :type selected_attack_class: dos, probe, r2l
+    :param normalize: flag if the numerical attributes should be normalized (default true)
     :type normalize: bool
-
+    :param one_hot_encode_labels: flag if the labels should be one hot encoded (default true)
+    :type one_hot_encode_labels: bool
     :return: attributes, class, attack_classs
     :rtype: (pd.DataFrame, pd.DataFrame, pd.DataFrame)
     """
+    # remove features based on attack class
+    if selected_attack_class == 'dos':
+        dataframe = remove_content(dataframe)
+        dataframe = remove_host_based(dataframe)
+    elif selected_attack_class == 'probe':
+        dataframe = remove_content(dataframe)
+    elif selected_attack_class == 'r2l':
+        dataframe = remove_host_based(dataframe)
+        dataframe = remove_time_based(dataframe)
+
     label_columns = ['class', 'attack_class']
     categorical_columns = ['protocol_type', 'service', 'flag']
     boolean_columns = ['land', 'logged_in', 'is_host_login', 'is_guest_login']
@@ -160,8 +178,12 @@ def preprocess(dataframe, normalize=True):
 
     # one-hot encoding
     attributes_dataframe = pd.get_dummies(attributes_dataframe, columns=categorical_columns)
-    class_dataframe = pd.get_dummies(class_dataframe, columns=['class'])
-    attack_class_dataframe = pd.get_dummies(attack_class_dataframe, columns=['attack_class'])
+    if one_hot_encode_labels:
+        class_dataframe = pd.get_dummies(class_dataframe, columns=['class'])
+        attack_class_dataframe = pd.get_dummies(attack_class_dataframe, columns=['attack_class'])
+    else:
+        class_dataframe = class_dataframe.cat.codes
+        attack_class_dataframe = attack_class_dataframe.cat.codes
 
     return attributes_dataframe, class_dataframe, attack_class_dataframe
 

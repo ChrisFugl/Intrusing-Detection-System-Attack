@@ -12,10 +12,10 @@ class DecisionTree(AbstractModel):
         self.classifier.fit(X, y)
 
     def predict(self, X):
-        pass
+        return self.classifier.predict(X)
 
     def save(self, path):
         dump(self.classifier, path)
 
     def load(self, path):
-        pass
+        self.classifier = load(path)

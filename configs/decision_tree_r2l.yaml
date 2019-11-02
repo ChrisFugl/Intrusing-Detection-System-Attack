@@ -1,0 +1,3 @@
+algorithm: dt
+attack_class: r2l
+save_model: saved_models/decision_tree_r2l.pkl
