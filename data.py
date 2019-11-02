@@ -1,4 +1,5 @@
 import numpy as np
+from operator import itemgetter
 import pandas as pd
 
 # features
@@ -62,7 +63,7 @@ def load_train():
     return _add_attack_class(
         pd.read_csv(
             'data/KDDTrain.csv',
-            header=0,
+            header=None,
             names=_HEADERS,
             dtype=_DTYPES
         )
@@ -75,7 +76,7 @@ def load_test():
     return _add_attack_class(
         pd.read_csv(
             'data/KDDTest.csv',
-            header=0,
+            header=None,
             names=_HEADERS,
             dtype=_DTYPES
         )
@@ -138,8 +139,19 @@ def preprocess(dataframe, normalize=True):
     if normalize:
         # laod trainingset since the numeric columns should be standardized in accordance with the trainingset,
         # and we do not know if the dataframe represents the trainingset
-        training = pd.read_csv('data/KDDTrain.csv', header=0, names=_HEADERS, usecols=numeric_columns)
-        preprocessed[numeric_columns] = (preprocessed[numeric_columns] - training.mean(axis=0)) / training.std(axis=0)
+        training = pd.read_csv('data/KDDTrain.csv', header=None, names=_HEADERS, usecols=numeric_columns)
+        mean = training.mean(axis=0)
+        std = training.std(axis=0)
+
+        # set to zero where std is zero
+        zero_std_columns = std == 0
+        zero_std_columns = zip(zero_std_columns.index, zero_std_columns)
+        zero_std_columns = filter(itemgetter(1), zero_std_columns)
+        zero_std_columns = list(map(itemgetter(0), zero_std_columns))
+        non_zero_std_columns = list(set(numeric_columns) - set(zero_std_columns))
+
+        preprocessed[zero_std_columns] = 0
+        preprocessed[non_zero_std_columns] = (preprocessed[non_zero_std_columns] - mean[non_zero_std_columns]) / std[non_zero_std_columns]
 
     # split into attributes, class, attack_class
     attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class'])
