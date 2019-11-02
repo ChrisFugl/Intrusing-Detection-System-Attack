@@ -3,6 +3,7 @@ attrs==19.3.0
 backcall==0.1.0
 bleach==3.1.0
 certifi==2019.9.11
+ConfigArgParse==0.15.1
 decorator==4.4.0
 defusedxml==0.6.0
 entrypoints==0.3
@@ -38,9 +39,11 @@ pyrsistent==0.15.4
 python-dateutil==2.8.0
 python-jsonrpc-server==0.2.0
 python-language-server==0.29.1
+PyYAML==5.1.2
 pyzmq==18.1.0
 qtconsole==4.5.5
 Send2Trash==1.5.0
+sklearn==0.0
 six==1.12.0
 terminado==0.8.2
 testpath==0.4.2

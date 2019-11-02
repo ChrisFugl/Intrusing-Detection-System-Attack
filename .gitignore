@@ -2,3 +2,5 @@ env/
 .DS_STORE
 .ipynb_checkpoints/
 *.ipynb
+__pycache__/
+saved_models/

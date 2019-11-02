@@ -134,8 +134,8 @@ Note: All of the functions, except the three getters, return (one or more) Panda
 **Example:**
 
 ``` py
-training_data = preprocess(load_train())
-test_data = preprocess(load_test())
+training_data, training_class, training_attack_class = preprocess(load_train())
+test_data, test_class, test_attack_class = preprocess(load_test())
 ```
 
 Preprocess is not automatically called when loading the datasets. This is intentionally designed that way in order to maintain easy access to the raw datasets.
