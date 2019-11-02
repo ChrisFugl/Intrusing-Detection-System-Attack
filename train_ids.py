@@ -19,7 +19,8 @@ def parse_arguments():
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--algorithm', required=True, choices=['dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
-    parser.add('--attack_class', required=False, default=None, choices=['dos', 'probe', 'r2l'], help='selects features based on the attack class (defaults to select all features)')
+    parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
+    parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
     options = parser.parse_args()
 
     # remove keys that should not be saved to config file
@@ -35,7 +36,7 @@ def parse_arguments():
     return options
 
 def load_data(options):
-    attributes_dataframe, _, attack_class_dataframe = preprocess(load_train(), selected_attack_class=options.attack_class)
+    attributes_dataframe, _, attack_class_dataframe = preprocess(load_train(), normalize=options.normalize)
     attributes = attributes_dataframe.to_numpy()
     attack_class = attack_class_dataframe.to_numpy()
     return attributes, attack_class
@@ -47,7 +48,7 @@ def get_model(options):
     elif algorithm == 'knn':
         raise Exception(f'Not implemented yet ({algorithm}).')
     elif algorithm == 'lr':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        return ids.LogisticRegression(max_iter=options.iterations)
     elif algorithm == 'mlp':
         raise Exception(f'Not implemented yet ({algorithm}).')
     elif algorithm == 'nb':

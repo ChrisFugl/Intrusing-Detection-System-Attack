@@ -1,3 +1,0 @@
-algorithm: dt
-attack_class: probe
-save_model: saved_models/decision_tree_probe.pkl

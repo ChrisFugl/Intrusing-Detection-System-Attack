@@ -3,4 +3,4 @@ from ids.abstract_model import AbstractModel
 class SupportVectorMachine(AbstractModel):
 
     def __init__(self):
-        super(self, SupportVectorMachine).__init__()
+        super(SupportVectorMachine, self).__init__()

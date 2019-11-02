@@ -101,9 +101,9 @@ def _add_attack_class(data):
 
 def preprocess(
         dataframe,
+        normalize=False,
+        one_hot_encode_labels=False,
         selected_attack_class=None,
-        normalize=True,
-        one_hot_encode_labels=True,
     ):
     """
     Preprocesses data.
@@ -119,9 +119,9 @@ def preprocess(
     :type dataframe: pd.DataFrame
     :param selected_attack_class: features are selected based on this (default to not removing any features)
     :type selected_attack_class: dos, probe, r2l
-    :param normalize: flag if the numerical attributes should be normalized (default true)
+    :param normalize: flag if the numerical attributes should be normalized (default false)
     :type normalize: bool
-    :param one_hot_encode_labels: flag if the labels should be one hot encoded (default true)
+    :param one_hot_encode_labels: flag if the labels should be one hot encoded (default false)
     :type one_hot_encode_labels: bool
     :return: attributes, class, attack_classs
     :rtype: (pd.DataFrame, pd.DataFrame, pd.DataFrame)
@@ -133,6 +133,7 @@ def preprocess(
     elif selected_attack_class == 'probe':
         dataframe = remove_content(dataframe)
     elif selected_attack_class == 'r2l':
+        dataframe = dataframe[dataframe['attack_class'].isin(['Normal', 'R2L'])]
         dataframe = remove_host_based(dataframe)
         dataframe = remove_time_based(dataframe)
 

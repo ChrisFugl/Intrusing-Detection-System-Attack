@@ -1,3 +1,0 @@
-algorithm: dt
-attack_class: dos
-save_model: saved_models/decision_tree_dos.pkl
