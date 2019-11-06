@@ -3,4 +3,5 @@ env/
 .ipynb_checkpoints/
 *.ipynb
 __pycache__/
+*.pyc
 saved_models/

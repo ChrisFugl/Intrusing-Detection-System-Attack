@@ -1,13 +1,15 @@
+from joblib import dump, load
+
 class AbstractModel:
 
     def train(self, X, y):
-        raise Exception('Method not implemented!')
+        raise NotImplementedError('train is not implemented yet')
 
     def predict(self, X):
-        raise Exception('Method not implemented!')
+        raise NotImplementedError('predict is not implemented yet')
 
     def save(self, path):
-        raise Exception('Method not implemented!')
+        dump(self.classifier, path)
 
     def load(self, path):
-        raise Exception('Method not implemented!')
+        self.classifier = load(path)

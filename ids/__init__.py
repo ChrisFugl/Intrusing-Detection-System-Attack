@@ -1,2 +1,3 @@
 from ids.decision_tree import DecisionTree
+from ids.k_nearest_neighbours import KNearestNeighbours
 from ids.logistic_regression import LogisticRegression

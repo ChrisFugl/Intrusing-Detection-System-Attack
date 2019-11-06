@@ -1,0 +1,4 @@
+algorithm: knn
+normalize: True
+save_model: saved_models/k_nearest_neighbors.pkl
+n_neighbors: 10

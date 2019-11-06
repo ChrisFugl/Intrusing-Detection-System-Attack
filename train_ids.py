@@ -5,7 +5,7 @@ import yaml
 
 def main():
     options = parse_arguments()
-    attributes, attack_class = load_data(options)
+    attributes, attack_class = load_data(load_train(), options)
     model = get_model(options)
     model.train(attributes, attack_class)
 
@@ -21,6 +21,7 @@ def parse_arguments():
     parser.add('--algorithm', required=True, choices=['dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
     parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
+    parse_ids_arguments(parser)
     options = parser.parse_args()
 
     # remove keys that should not be saved to config file
@@ -35,8 +36,12 @@ def parse_arguments():
 
     return options
 
-def load_data(options):
-    attributes_dataframe, _, attack_class_dataframe = preprocess(load_train(), normalize=options.normalize)
+def parse_ids_arguments(parser):
+    knn_group = parser.add_argument_group('knn')
+    knn_group.add('--n_neighbors', required=False, default=5, type=int, help='number of neighbours to compare')
+
+def load_data(data, options):
+    attributes_dataframe, _, attack_class_dataframe = preprocess(data, normalize=options.normalize)
     attributes = attributes_dataframe.to_numpy()
     attack_class = attack_class_dataframe.to_numpy()
     return attributes, attack_class
@@ -46,19 +51,19 @@ def get_model(options):
     if algorithm == 'dt':
         return ids.DecisionTree()
     elif algorithm == 'knn':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        return ids.KNearestNeighbours(n_neighbors=options.n_neighbors)
     elif algorithm == 'lr':
         return ids.LogisticRegression(max_iter=options.iterations)
     elif algorithm == 'mlp':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        raise NotImplementedError(algorithm)
     elif algorithm == 'nb':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        raise NotImplementedError(algorithm)
     elif algorithm == 'rf':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        raise NotImplementedError(algorithm)
     elif ids == 'svm':
-        raise Exception(f'Not implemented yet ({algorithm}).')
+        raise NotImplementedError(algorithm)
     else:
-        raise Exception(f'"{algorithm}" is not a valid choice of algorithm.')
+        raise NotImplementedError(f'"{algorithm}" is not a valid choice of algorithm.')
 
 if __name__ == '__main__':
     main()
