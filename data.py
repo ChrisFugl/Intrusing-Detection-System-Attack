@@ -1,3 +1,4 @@
+from functools import partial
 import numpy as np
 from operator import itemgetter
 import pandas as pd
@@ -102,7 +103,6 @@ def _add_attack_class(data):
 def preprocess(
         dataframe,
         normalize=False,
-        one_hot_encode_labels=False,
         selected_attack_class=None,
     ):
     """
@@ -112,8 +112,9 @@ def preprocess(
     * Removes features based on selected_attack_class
     * Removes rows with attack classes: U2R.
     * Normalize numeric attributes unless specified otherwise.
-    * Splits data into: attributes, class, attack_class.
+    * Splits data into: attributes, attack_class.
     * One-hot encodes columns: protocol_type, service, flag, class, attack_class.
+    * Makes attack class binary (in accordance with the selected attack class).
 
     :param dataframe: data
     :type dataframe: pd.DataFrame
@@ -123,8 +124,8 @@ def preprocess(
     :type normalize: bool
     :param one_hot_encode_labels: flag if the labels should be one hot encoded (default false)
     :type one_hot_encode_labels: bool
-    :return: attributes, class, attack_classs
-    :rtype: (pd.DataFrame, pd.DataFrame, pd.DataFrame)
+    :return: attributes, binary attack class
+    :rtype: (ndarray, ndarray)
     """
     # remove features based on attack class
     if selected_attack_class == 'dos':
@@ -172,21 +173,22 @@ def preprocess(
         preprocessed[zero_std_columns] = 0
         preprocessed[non_zero_std_columns] = (preprocessed[non_zero_std_columns] - mean[non_zero_std_columns]) / std[non_zero_std_columns]
 
-    # split into attributes, class, attack_class
+    # split into (attributes, attack_class) and remove class from attributes
     attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class'])
-    class_dataframe = preprocessed['class']
     attack_class_dataframe = preprocessed['attack_class']
 
     # one-hot encoding
     attributes_dataframe = pd.get_dummies(attributes_dataframe, columns=categorical_columns)
-    if one_hot_encode_labels:
-        class_dataframe = pd.get_dummies(class_dataframe, columns=['class'])
-        attack_class_dataframe = pd.get_dummies(attack_class_dataframe, columns=['attack_class'])
-    else:
-        class_dataframe = class_dataframe.cat.codes
-        attack_class_dataframe = attack_class_dataframe.cat.codes
 
-    return attributes_dataframe, class_dataframe, attack_class_dataframe
+    # make attack class binary (0 = normal, 1 = malicious)
+    binary_attack_class = np.zeros_like(attack_class_dataframe, dtype=np.bool)
+    if selected_attack_class is not None:
+        binary_attack_class[attack_class_dataframe == selected_attack_class] = 1
+    else:
+        binary_attack_class[attack_class_dataframe != 'Normal'] = 1
+
+    attributes = attributes_dataframe.to_numpy().astype(np.float)
+    return attributes, binary_attack_class
 
 def get_content_columns():
     """
