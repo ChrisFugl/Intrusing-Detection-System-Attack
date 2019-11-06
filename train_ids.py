@@ -38,7 +38,20 @@ def parse_arguments():
 
 def parse_ids_arguments(parser):
     knn_group = parser.add_argument_group('knn')
-    knn_group.add('--n_neighbors', required=False, default=5, type=int, help='number of neighbours to compare')
+    knn_group.add('--n_neighbors', required=False, default=5, type=int, help='number of neighbours to compare (default 5)')
+
+    tree_group = parser.add_argument_group('trees (decision tree and random forest)')
+    tree_group.add('--n_trees', required=False, default=10, type=int, help='number of trees in a random forest (default 5)')
+    tree_group.add('--max_depth', required=False, default=None, type=null_or_int, help='maximum tree depth (default infinite)')
+    tree_group.add('--split_criterion', required=False, default='gini', choices=['gini', 'entropy'], help='criterion for how to split a node (default gini)')
+    tree_group.add('--min_samples_leaf', required=False, default=1, type=int, help='minimum number of samples required for a node to be a leaf')
+    tree_group.add('--min_samples_split', required=False, default=2, type=int, help='minimum number of samples required to split a node')
+
+def null_or_int(value):
+    if value is None or value == 'null' or value == 'None':
+        return None
+    else:
+        return int(value)
 
 def load_data(data, options):
     attributes_dataframe, _, attack_class_dataframe = preprocess(data, normalize=options.normalize)
@@ -49,7 +62,12 @@ def load_data(data, options):
 def get_model(options):
     algorithm = options.algorithm
     if algorithm == 'dt':
-        return ids.DecisionTree()
+        return ids.DecisionTree(
+            max_depth=options.max_depth,
+            split_criterion=options.split_criterion,
+            min_samples_leaf=options.min_samples_leaf,
+            min_samples_split=options.min_samples_split
+        )
     elif algorithm == 'knn':
         return ids.KNearestNeighbours(n_neighbors=options.n_neighbors)
     elif algorithm == 'lr':
@@ -59,7 +77,13 @@ def get_model(options):
     elif algorithm == 'nb':
         return ids.NaiveBayes()
     elif algorithm == 'rf':
-        raise NotImplementedError(algorithm)
+        return ids.RandomForest(
+            n_trees=options.n_trees,
+            max_depth=options.max_depth,
+            split_criterion=options.split_criterion,
+            min_samples_leaf=options.min_samples_leaf,
+            min_samples_split=options.min_samples_split
+        )
     elif ids == 'svm':
         raise NotImplementedError(algorithm)
     else:
