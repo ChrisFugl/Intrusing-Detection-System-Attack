@@ -1,12 +1,16 @@
 from joblib import dump, load
 
 class AbstractModel:
+    """
+    Base model that all other models should inherit from.
+    Expects that classifier method is initialized during construction.
+    """
 
     def train(self, X, y):
-        raise NotImplementedError('train is not implemented yet')
+        self.classifier.fit(X, y)
 
     def predict(self, X):
-        raise NotImplementedError('predict is not implemented yet')
+        return self.classifier.predict(X)
 
     def save(self, path):
         dump(self.classifier, path)

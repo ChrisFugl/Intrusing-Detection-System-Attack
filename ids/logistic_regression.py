@@ -9,9 +9,3 @@ class LogisticRegression(AbstractModel):
         solver='lbfgs',
         max_iter=max_iter
     )
-
-    def train(self, X, y):
-        self.classifier.fit(X, y)
-
-    def predict(self, X):
-        return self.classifier.predict(X)

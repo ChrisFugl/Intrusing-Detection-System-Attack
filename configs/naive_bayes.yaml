@@ -1,0 +1,3 @@
+algorithm: nb
+normalize: True
+save_model: saved_models/naive_bayes.pkl

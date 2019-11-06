@@ -57,7 +57,7 @@ def get_model(options):
     elif algorithm == 'mlp':
         raise NotImplementedError(algorithm)
     elif algorithm == 'nb':
-        raise NotImplementedError(algorithm)
+        return ids.NaiveBayes()
     elif algorithm == 'rf':
         raise NotImplementedError(algorithm)
     elif ids == 'svm':
