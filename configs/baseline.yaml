@@ -1,0 +1,3 @@
+algorithm: baseline
+normalize: True
+save_model: saved_models/baseline.pkl

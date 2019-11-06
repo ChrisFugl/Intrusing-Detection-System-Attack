@@ -20,7 +20,7 @@ def parse_arguments():
     parser.add('--config', required=False, is_config_file=True, help='config file path')
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
-    parser.add('--algorithm', required=True, choices=['dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
+    parser.add('--algorithm', required=True, choices=['baseline', 'dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
     parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
     parse_ids_arguments(parser)
@@ -65,7 +65,9 @@ def null_or_int(value):
 
 def get_model(options, n_features):
     algorithm = options.algorithm
-    if algorithm == 'dt':
+    if algorithm == 'baseline':
+        return ids.Baseline()
+    elif algorithm == 'dt':
         return ids.DecisionTree(
             max_depth=options.max_depth,
             split_criterion=options.split_criterion,
