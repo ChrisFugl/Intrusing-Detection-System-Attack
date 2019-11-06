@@ -84,10 +84,10 @@ def get_model(options):
             min_samples_leaf=options.min_samples_leaf,
             min_samples_split=options.min_samples_split
         )
-    elif ids == 'svm':
-        raise NotImplementedError(algorithm)
+    elif algorithm == 'svm':
+        return ids.SupportVectorMachine(max_iter=options.iterations)
     else:
-        raise NotImplementedError(f'"{algorithm}" is not a valid choice of algorithm.')
+        raise Exception(f'"{algorithm}" is not a valid choice of algorithm.')
 
 if __name__ == '__main__':
     main()

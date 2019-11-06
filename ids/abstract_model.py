@@ -3,7 +3,7 @@ from joblib import dump, load
 class AbstractModel:
     """
     Base model that all other models should inherit from.
-    Expects that classifier method is initialized during construction.
+    Expects that classifier algorithm is initialized during construction.
     """
 
     def train(self, X, y):
