@@ -102,6 +102,7 @@ def _add_attack_class(data):
 
 def preprocess(
         dataframe,
+        type=None,
         normalize=False,
         selected_attack_class=None,
     ):
@@ -154,6 +155,16 @@ def preprocess(
     removed_attack_classes = ['U2R']
     removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
     preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
+
+    # select only normal traffic
+    if type == "Normal":
+        removed_attack_classes = ['DoS', 'R2L', 'U2R', 'Probe']
+        removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
+        preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
+    elif type == "Malicious":
+        removed_attack_classes = ['Normal', 'U2R']
+        removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
+        preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
 
     # normalize
     if normalize:
