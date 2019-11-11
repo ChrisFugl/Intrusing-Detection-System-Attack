@@ -141,43 +141,40 @@ def preprocess(
     :return: attributes, binary attack class
     :rtype: (ndarray, ndarray)
     """
+    preprocessed = dataframe
+
     # remove features based on attack class
     if selected_attack_class == 'dos':
-        dataframe = remove_content(dataframe)
-        dataframe = remove_host_based(dataframe)
+        preprocessed = remove_content(preprocessed)
+        preprocessed = remove_host_based(preprocessed)
     elif selected_attack_class == 'probe':
-        dataframe = remove_content(dataframe)
+        preprocessed = remove_content(preprocessed)
     elif selected_attack_class == 'r2l':
-        dataframe = dataframe[dataframe['attack_class'].isin(['Normal', 'R2L'])]
-        dataframe = remove_host_based(dataframe)
-        dataframe = remove_time_based(dataframe)
+        preprocessed = preprocessed[preprocessed['attack_class'].isin(['Normal', 'R2L'])]
+        preprocessed = remove_host_based(preprocessed)
+        preprocessed = remove_time_based(preprocessed)
 
     label_columns = ['class', 'attack_class']
     categorical_columns = ['protocol_type', 'service', 'flag']
     boolean_columns = ['land', 'logged_in', 'is_host_login', 'is_guest_login']
     # difficulty_level is a categorical column, but we do not want to one-hot encode it, and neither should it be considered as numeric
     numeric_columns = list(
-        set(dataframe.columns)
+        set(preprocessed.columns)
       - set(label_columns)
       - set(categorical_columns)
       - set(boolean_columns)
       - set(['difficulty_level'])
     )
 
-    # remove attack classes: U2R
-    removed_attack_classes = ['U2R']
-    removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
-    preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
-
     # select only normal traffic
     if type == "Normal":
         removed_attack_classes = ['DoS', 'R2L', 'U2R', 'Probe']
         removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
-        preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
+        preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
     elif type == "Malicious":
         removed_attack_classes = ['Normal', 'U2R']
-        removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
-        preprocessed = dataframe.drop(index=removed_attack_classes_index).reset_index(drop=True)
+        removed_attack_classes_index = preprocessed[preprocessed['attack_class'].isin(removed_attack_classes)].index
+        preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
 
     # normalize
     if normalize:
