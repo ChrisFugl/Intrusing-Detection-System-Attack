@@ -1,7 +1,6 @@
 from tabulate import tabulate
 from test_ids import test
 from train_ids import parse_arguments
-from yaml import load, Loader
 
 IDS_CONFIGS = [
     ('baseline', 'configs/baseline.yaml'),

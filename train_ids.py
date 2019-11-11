@@ -8,14 +8,7 @@ import yaml
 def main():
     arguments = sys.argv[1:]
     options = parse_arguments(arguments)
-    attributes, labels = preprocess(load_train(), normalize=options.normalize)
-    n_attributes = attributes.shape[1]
-    model = get_model(options, n_attributes)
-    model.train(attributes, labels)
-
-    # save model
-    if options.save_model is not None:
-        model.save(options.save_model)
+    train(options)
 
 def parse_arguments(arguments):
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
@@ -64,6 +57,16 @@ def null_or_int(value):
         return None
     else:
         return int(value)
+
+def train(options):
+    attributes, labels = preprocess(load_train(), normalize=options.normalize)
+    n_attributes = attributes.shape[1]
+    model = get_model(options, n_attributes)
+    model.train(attributes, labels)
+
+    # save model
+    if options.save_model is not None:
+        model.save(options.save_model)
 
 def get_model(options, n_features):
     algorithm = options.algorithm
