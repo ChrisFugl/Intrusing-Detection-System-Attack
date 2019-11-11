@@ -83,6 +83,19 @@ def load_test():
         )
     )
 
+def load_val():
+    """
+    Loads validationset as a Pandas dataframe.
+    """
+    return _add_attack_class(
+        pd.read_csv(
+            'data/KDDVal.csv',
+            header=None,
+            names=_HEADERS,
+            dtype=_DTYPES
+        )
+    )
+
 def _add_attack_class(data):
     """
     Adds attack_class column to dataframe.
