@@ -1,9 +1,8 @@
 import configargparse
-from sklearn import metrics
-from tabulate import tabulate
 from data import load_test, preprocess
 from model import WGAN
 from train_wgan import parse_arguments
+from scores import get_binary_class_scores, print_scores
 
 def main():
     options = parse_arguments()
@@ -16,14 +15,7 @@ def test(options):
     model = WGAN(options, n_attributes)
     model.load(options.save_model)
     predictions, labels = model.predict(M_attributes, labels)
-    return get_scores(labels, predictions)
-
-def get_scores(labels, predictions):
-    accuracy = metrics.accuracy_score(labels, predictions)
-    f1 = metrics.f1_score(labels, predictions, average='micro')
-    precision = metrics.precision_score(labels, predictions, average='micro')
-    recall = metrics.recall_score(labels, predictions, average='micro')
-    return accuracy, f1, precision, recall
+    return get_binary_class_scores(labels, predictions)
 
 def print_scores(scores):
     scores = list(map(lambda score: f'{score:0.4f}', scores))

@@ -65,6 +65,13 @@ jupyter notebook
 
 Select "IDSA" when creating a new notebook.
 
+## Tests
+All tests are located in the *tests* directory. Use the following command to run all tests:
+
+``` sh
+python -m unittest discover -s tests
+```
+
 ## Structure
 The following is proposed for how to structure the codebase. The specific API of each file is to be decided after agreeing on a structure.
 

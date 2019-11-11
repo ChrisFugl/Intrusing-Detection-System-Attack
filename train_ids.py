@@ -2,10 +2,12 @@ import configargparse
 from data import load_train, preprocess
 import ids
 import numpy as np
+import sys
 import yaml
 
 def main():
-    options = parse_arguments()
+    arguments = sys.argv[1:]
+    options = parse_arguments(arguments)
     attributes, labels = preprocess(load_train(), normalize=options.normalize)
     n_attributes = attributes.shape[1]
     model = get_model(options, n_attributes)
@@ -15,7 +17,7 @@ def main():
     if options.save_model is not None:
         model.save(options.save_model)
 
-def parse_arguments():
+def parse_arguments(arguments):
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
@@ -24,7 +26,7 @@ def parse_arguments():
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
     parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
     parse_ids_arguments(parser)
-    options = parser.parse_args()
+    options = parser.parse_args(arguments)
 
     # remove keys that should not be saved to config file
     save_config = options.save_config
