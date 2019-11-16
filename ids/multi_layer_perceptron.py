@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from ids.abstract_model import AbstractModel
+from scores import get_binary_class_scores
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
@@ -10,7 +11,7 @@ class MultiLayerPerceptron(AbstractModel):
     """
 
     def __init__(self, input_size,
-                log_dir, log_every=1000, evaluate_every=10000,
+                log_dir, log_every=20, evaluate_every=100,
                 epochs=10, batch_size=128, learning_rate=0.001, weight_decay=0, dropout_rate=0.5, hidden_size=128):
         output_size = 1
         self.model = nn.Sequential(OrderedDict([
@@ -32,7 +33,7 @@ class MultiLayerPerceptron(AbstractModel):
         self.log_every = log_every
         self.evaluate_every = evaluate_every
 
-    def train(self, X, y):
+    def train(self, X_train, y_train, X_val, y_val):
         """
         Trains multilayer perceptron.
 
@@ -40,42 +41,77 @@ class MultiLayerPerceptron(AbstractModel):
         :param y: N x 1 ndarray
         """
         writer_train = SummaryWriter(self.log_dir + 'train/')
+        writer_val = SummaryWriter(self.log_dir + 'val/')
         self.model.train()
-        n_observations = len(X)
+        n_observations = len(X_train)
         total_batches = n_observations // self.batch_size
-        X_torch = torch.from_numpy(X).float()
-        y_torch = torch.from_numpy(y).float()
-        writer_train.add_graph(self.model, X_torch)
+        X_train_tensor, y_train_tensor = self.numpy2tensor(X_train, y_train)
+        X_val_tensor, y_val_tensor = self.numpy2tensor(X_val, y_val)
+        writer_train.add_graph(self.model, X_train_tensor)
+        batches = 0
         iterations = 0
         for epoch in range(self.epochs):
             for batch_number in range(total_batches):
-                batch_start = batch_number * self.batch_size
-                batch_finish = (batch_number + 1) * self.batch_size
-                batch_X = X_torch[batch_start:batch_finish]
-                batch_y = y_torch[batch_start:batch_finish]
-                logits = self.model(batch_X).squeeze()
+                batch_X, batch_y = self.get_batch(X_train_tensor, y_train_tensor, batch_number)
+                logits_train = self.input2logits(batch_X)
+                self.optimize(logits_train, batch_y)
 
-                self.optimizer.zero_grad()
-                loss = self.criterion(logits, batch_y)
-                loss.backward()
-                self.optimizer.step()
+                if batches % self.log_every == 0:
+                    self.log(writer_train, iterations, logits_train, batch_y)
 
-                if iterations % self.log_every < self.batch_size:
-                    self.log(writer_train, iterations, loss, logits, batch_y)
+                if batches % self.evaluate_every == 0:
+                    self.model.eval()
+                    logits_val = self.input2logits(X_val_tensor)
+                    self.model.train()
+                    self.log(writer_val, iterations, logits_val, y_val_tensor)
 
+                batches += 1
                 iterations += self.batch_size
         writer_train.close()
+        writer_val.close()
 
-    def log(self, writer, iterations, loss, logits, labels):
+    def numpy2tensor(self, X, y):
+        X_tensor = torch.from_numpy(X).float()
+        y_tensor = torch.from_numpy(y).float()
+        return X_tensor, y_tensor
+
+    def get_batch(self, X, y, batch_number):
+        batch_start = batch_number * self.batch_size
+        batch_finish = (batch_number + 1) * self.batch_size
+        batch_X = X[batch_start:batch_finish]
+        batch_y = y[batch_start:batch_finish]
+        return batch_X, batch_y
+
+    def input2logits(self, X):
+        return self.model(X).squeeze()
+
+    def optimize(self, logits, labels):
+        self.optimizer.zero_grad()
+        loss = self.criterion(logits, labels)
+        loss.backward()
+        self.optimizer.step()
+
+    def log(self, writer, iterations, logits, labels):
+        loss = self.criterion(logits, labels)
+        predictions = self.logits2prediction(logits)
+        accuracy, f1, precision, recall = get_binary_class_scores(labels, predictions)
         writer.add_scalar('loss', loss.item(), iterations)
+        writer.add_scalar('scores/accuracy', accuracy, iterations)
+        writer.add_scalar('scores/f1', f1, iterations)
+        writer.add_scalar('scores/precision', precision, iterations)
+        writer.add_scalar('scores/recall', recall, iterations)
+        writer.flush()
 
     def predict(self, X):
         self.model.eval()
-        batch = torch.from_numpy(X).float()
-        outputs = self.model(batch)
-        predictions = torch.empty_like(outputs)
-        predictions[outputs < 0] = 0
-        predictions[outputs >= 0] = 1
+        X_tensor = torch.from_numpy(X).float()
+        logits = self.input2logits(X_tensor)
+        return self.logits2prediction(logits)
+
+    def logits2prediction(self, logits):
+        predictions = torch.empty_like(logits)
+        predictions[logits < 0] = 0
+        predictions[logits >= 0] = 1
         return predictions.numpy()
 
     def save(self, path):

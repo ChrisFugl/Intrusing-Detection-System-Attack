@@ -1,5 +1,5 @@
 import configargparse
-from data import load_train, preprocess
+from data import load_train, load_val, preprocess
 import ids
 import numpy as np
 import sys
@@ -13,9 +13,6 @@ def main():
 def parse_arguments(arguments):
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
-    parser.add('--log_dir', required=False, default='logs/', type=str, help='path to save logs (deafult logs/)')
-    parser.add('--log_every', required=False, default=1000, type=int, help='log training every this amount of observations (default 1000)')
-    parser.add('--evaluate_every', required=False, default=10000, type=int, help='log training on validation set every this amount of observations (default 10000)')
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--algorithm', required=True, choices=['baseline', 'dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
@@ -48,6 +45,9 @@ def parse_ids_arguments(parser):
     tree_group.add('--min_samples_split', required=False, default=2, type=int, help='minimum number of samples required to split a node (default 2)')
 
     mlp_group = parser.add_argument_group('mlp')
+    mlp_group.add('--log_dir', required=False, default='logs/', type=str, help='path to save logs (deafult logs/)')
+    mlp_group.add('--log_every', required=False, default=100, type=int, help='log training every this amount of batches (default 100)')
+    mlp_group.add('--evaluate_every', required=False, default=1000, type=int, help='log training on validation set every this amount of batches (default 1000)')
     mlp_group.add('--epochs', required=False, default=10, type=int, help='epochs of training (default 10)')
     mlp_group.add('--batch_size', required=False, default=128, type=int, help='batch size (default 128)')
     mlp_group.add('--learning_rate', required=False, default=0.001, type=float, help='learning rate (default 0.001)')
@@ -62,10 +62,11 @@ def null_or_int(value):
         return int(value)
 
 def train(options):
-    attributes, labels = preprocess(load_train(), normalize=options.normalize)
-    n_attributes = attributes.shape[1]
+    attributes_train, labels_train = preprocess(load_train(), normalize=options.normalize)
+    attributes_val, labels_val = preprocess(load_val(), normalize=options.normalize)
+    n_attributes = attributes_train.shape[1]
     model = get_model(options, n_attributes)
-    model.train(attributes, labels)
+    model.train(attributes_train, labels_train, attributes_val, labels_val)
 
     # save model
     if options.save_model is not None:

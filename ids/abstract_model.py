@@ -6,8 +6,8 @@ class AbstractModel:
     Expects that classifier algorithm is initialized during construction.
     """
 
-    def train(self, X, y):
-        self.classifier.fit(X, y)
+    def train(self, X_train, y_train, X_val, y_val):
+        self.classifier.fit(X_train, y_train)
 
     def predict(self, X):
         return self.classifier.predict(X)

@@ -1,9 +1,12 @@
 algorithm: mlp
-batch_size: 128
-dropout_rate: 0.5
-epochs: 1
+batch_size: 512
+dropout_rate: 0.25
+epochs: 32
+evaluate_every: 20
 hidden_size: 128
-learning_rate: 0.001
+learning_rate: 0.00003
+log_dir: logs/mlp/
+log_every: 10
 normalize: True
 save_model: saved_models/multi_layer_perceptron.pt
-weight_decay: 0
+weight_decay: 0.3
