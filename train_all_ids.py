@@ -1,3 +1,4 @@
+from tabulate import tabulate
 from train_ids import parse_arguments, train
 
 IDS_CONFIGS = [
@@ -12,10 +13,24 @@ IDS_CONFIGS = [
 ]
 
 def main():
+    results = []
     for name, config_path in IDS_CONFIGS:
         options = parse_arguments(['--config', config_path])
         print(name)
-        train(options)
+        scores_val = train(options)
+        named_scores = [name, *scores_val]
+        results.append(named_scores)
+    print_results(results)
+
+def print_results(results):
+    rows = list(map(format_result, results))
+    headers = ['algorithm', 'accuracy', 'f1', 'precision', 'recall']
+    print(tabulate(rows, headers=headers))
+
+def format_result(result):
+    scores = map(lambda score: f'{score:0.4f}', result[1:])
+    formatted_result = [result[0], *scores]
+    return formatted_result
 
 if __name__ == '__main__':
     main()

@@ -2,13 +2,15 @@ import configargparse
 from data import load_train, load_val, preprocess
 import ids
 import numpy as np
+from scores import get_binary_class_scores, print_scores
 import sys
 import yaml
 
 def main():
     arguments = sys.argv[1:]
     options = parse_arguments(arguments)
-    train(options)
+    scores_val = train(options)
+    print_scores(scores_val)
 
 def parse_arguments(arguments):
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
@@ -36,13 +38,19 @@ def parse_arguments(arguments):
 def parse_ids_arguments(parser):
     knn_group = parser.add_argument_group('knn')
     knn_group.add('--n_neighbors', required=False, default=5, type=int, help='number of neighbours to compare (default 5)')
+    knn_group.add('--knn_algorithm', required=False, default='auto', choices=['auto', 'ball_tree', 'kd_tree', 'brute'], help='algorithm used to compute nearest neighbour (default auto)')
+    knn_group.add('--knn_weights', required=False, default='uniform', choices=['uniform', 'distance'], help='importance of neighbour points in classification (default uniform)')
+
+    lr_group = parser.add_argument_group('lr')
+    lr_group.add('--lr_solver', required=False, default='lbfgs', choices=['lbfgs', 'sag', 'saga', 'liblinear'], help='algorithm to solve logistic regression problem (default lbfgs)')
 
     tree_group = parser.add_argument_group('trees (decision tree and random forest)')
     tree_group.add('--n_trees', required=False, default=10, type=int, help='number of trees in a random forest (default 5)')
     tree_group.add('--max_depth', required=False, default=None, type=null_or_int, help='maximum tree depth (default infinite)')
-    tree_group.add('--split_criterion', required=False, default='gini', choices=['gini', 'entropy'], help='criterion for how to split a node (default gini)')
     tree_group.add('--min_samples_leaf', required=False, default=1, type=int, help='minimum number of samples required for a node to be a leaf (default 1)')
     tree_group.add('--min_samples_split', required=False, default=2, type=int, help='minimum number of samples required to split a node (default 2)')
+    tree_group.add('--split_criterion', required=False, default='gini', choices=['gini', 'entropy'], help='criterion for how to split a node (default gini)')
+    tree_group.add('--splitter', required=False, default='best', choices=['best', 'random'], help='strategy used to split nodes (default best)')
 
     mlp_group = parser.add_argument_group('mlp')
     mlp_group.add('--log_dir', required=False, default='logs/', type=str, help='path to save logs (deafult logs/)')
@@ -72,6 +80,10 @@ def train(options):
     if options.save_model is not None:
         model.save(options.save_model)
 
+    # compute validation scores
+    predictions_val = model.predict(attributes_val)
+    return get_binary_class_scores(labels_val, predictions_val)
+
 def get_model(options, n_features):
     algorithm = options.algorithm
     if algorithm == 'baseline':
@@ -80,13 +92,21 @@ def get_model(options, n_features):
         return ids.DecisionTree(
             max_depth=options.max_depth,
             split_criterion=options.split_criterion,
+            splitter=options.splitter,
             min_samples_leaf=options.min_samples_leaf,
             min_samples_split=options.min_samples_split
         )
     elif algorithm == 'knn':
-        return ids.KNearestNeighbours(n_neighbors=options.n_neighbors)
+        return ids.KNearestNeighbours(
+            algorithm=options.knn_algorithm,
+            n_neighbors=options.n_neighbors,
+            weights=options.knn_weights
+        )
     elif algorithm == 'lr':
-        return ids.LogisticRegression(max_iter=options.iterations)
+        return ids.LogisticRegression(
+            max_iter=options.iterations,
+            solver=options.lr_solver
+        )
     elif algorithm == 'mlp':
         return ids.MultiLayerPerceptron(
             input_size=n_features,
