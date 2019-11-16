@@ -4,6 +4,7 @@ from scores import get_binary_class_scores
 import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
+from utils import with_cpu, with_gpu
 
 class MultiLayerPerceptron(AbstractModel):
     """
@@ -12,9 +13,10 @@ class MultiLayerPerceptron(AbstractModel):
 
     def __init__(self, input_size,
                 log_dir, log_every=20, evaluate_every=100,
-                epochs=10, batch_size=128, learning_rate=0.001, weight_decay=0, dropout_rate=0.5, hidden_size=128):
+                epochs=10, batch_size=128, learning_rate=0.001,
+                weight_decay=0, dropout_rate=0.5, hidden_size=128):
         output_size = 1
-        self.model = nn.Sequential(OrderedDict([
+        self.model = with_gpu(nn.Sequential(OrderedDict([
             ('hidden1', nn.Linear(in_features=input_size, out_features=hidden_size, bias=True)),
             ('hidden1_batchnorm', nn.BatchNorm1d(hidden_size)),
             ('hidden1_dropout', nn.Dropout(p=dropout_rate)),
@@ -24,14 +26,15 @@ class MultiLayerPerceptron(AbstractModel):
             ('hidden2_dropout', nn.Dropout(p=dropout_rate)),
             ('hidden2_activation', nn.ReLU()),
             ('output', nn.Linear(in_features=hidden_size, out_features=output_size, bias=True))
-        ]))
+        ])))
         self.epochs = epochs
         self.batch_size = batch_size
-        self.criterion = nn.BCEWithLogitsLoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
         self.log_dir = log_dir
         self.log_every = log_every
         self.evaluate_every = evaluate_every
+        self.criterion = nn.BCEWithLogitsLoss()
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+
 
     def train(self, X_train, y_train, X_val, y_val):
         """
@@ -71,8 +74,8 @@ class MultiLayerPerceptron(AbstractModel):
         writer_val.close()
 
     def numpy2tensor(self, X, y):
-        X_tensor = torch.from_numpy(X).float()
-        y_tensor = torch.from_numpy(y).float()
+        X_tensor = with_gpu(torch.from_numpy(X).float())
+        y_tensor = with_gpu(torch.from_numpy(y).float())
         return X_tensor, y_tensor
 
     def get_batch(self, X, y, batch_number):
@@ -91,9 +94,10 @@ class MultiLayerPerceptron(AbstractModel):
         loss.backward()
         self.optimizer.step()
 
-    def log(self, writer, iterations, logits, labels):
-        loss = self.criterion(logits, labels)
-        predictions = self.logits2prediction(logits)
+    def log(self, writer, iterations, logits_tensor, labels_tensor):
+        loss = self.criterion(logits_tensor, labels_tensor)
+        predictions = self.logits2prediction(logits_tensor)
+        labels = with_cpu(labels_tensor).numpy()
         accuracy, f1, precision, recall = get_binary_class_scores(labels, predictions)
         writer.add_scalar('loss', loss.item(), iterations)
         writer.add_scalar('scores/accuracy', accuracy, iterations)
@@ -104,15 +108,15 @@ class MultiLayerPerceptron(AbstractModel):
 
     def predict(self, X):
         self.model.eval()
-        X_tensor = torch.from_numpy(X).float()
-        logits = self.input2logits(X_tensor)
-        return self.logits2prediction(logits)
+        X_tensor = with_gpu(torch.from_numpy(X).float())
+        logits_tensor = self.input2logits(X_tensor)
+        return self.logits2prediction(logits_tensor)
 
-    def logits2prediction(self, logits):
-        predictions = torch.empty_like(logits)
-        predictions[logits < 0] = 0
-        predictions[logits >= 0] = 1
-        return predictions.numpy()
+    def logits2prediction(self, logits_tensor):
+        predictions = torch.empty_like(logits_tensor)
+        predictions[logits_tensor < 0] = 0
+        predictions[logits_tensor >= 0] = 1
+        return with_cpu(predictions).numpy()
 
     def save(self, path):
         torch.save(self.model.state_dict(), path)
