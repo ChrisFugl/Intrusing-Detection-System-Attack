@@ -13,6 +13,9 @@ def main():
 def parse_arguments(arguments):
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
     parser.add('--config', required=False, is_config_file=True, help='config file path')
+    parser.add('--log_dir', required=False, default='logs/', type=str, help='path to save logs (deafult logs/)')
+    parser.add('--log_every', required=False, default=1000, type=int, help='log training every this amount of observations (default 1000)')
+    parser.add('--evaluate_every', required=False, default=10000, type=int, help='log training on validation set every this amount of observations (default 10000)')
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--algorithm', required=True, choices=['baseline', 'dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
@@ -86,6 +89,9 @@ def get_model(options, n_features):
     elif algorithm == 'mlp':
         return ids.MultiLayerPerceptron(
             input_size=n_features,
+            log_dir=options.log_dir,
+            log_every=options.log_every,
+            evaluate_every=options.evaluate_every,
             epochs=options.epochs,
             batch_size=options.batch_size,
             learning_rate=options.learning_rate,

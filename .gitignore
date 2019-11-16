@@ -5,3 +5,5 @@ env/
 __pycache__/
 *.pyc
 saved_models/
+user_scripts/
+logs/

@@ -3,9 +3,11 @@ from data import load_test, preprocess
 import ids
 from train_ids import get_model, parse_arguments
 from scores import get_binary_class_scores, print_scores
+import sys
 
 def main():
-    options = parse_arguments()
+    arguments = sys.argv[1:]
+    options = parse_arguments(arguments)
     scores = test(options)
     print_scores(scores)
 
