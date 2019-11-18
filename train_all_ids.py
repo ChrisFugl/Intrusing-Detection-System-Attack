@@ -24,7 +24,7 @@ def main():
 
 def print_results(results):
     rows = list(map(format_result, results))
-    headers = ['algorithm', 'accuracy', 'f1', 'precision', 'recall']
+    headers = ['algorithm', 'accuracy', 'f1', 'precision', 'recall', 'detection_rate']
     print(tabulate(rows, headers=headers))
 
 def format_result(result):

@@ -19,7 +19,6 @@ def parse_arguments(arguments):
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--algorithm', required=True, choices=['baseline', 'dt', 'knn', 'lr', 'mlp', 'nb', 'rf', 'svm'], help='algorithm to train')
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
-    parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
     parse_ids_arguments(parser)
     options = parser.parse_args(arguments)
 
@@ -36,6 +35,8 @@ def parse_arguments(arguments):
     return options
 
 def parse_ids_arguments(parser):
+    parser.add('--iterations', required=False, type=int, default=1000, help='number of training iterations (default 1000)')
+
     knn_group = parser.add_argument_group('knn')
     knn_group.add('--n_neighbors', required=False, default=5, type=int, help='number of neighbours to compare (default 5)')
     knn_group.add('--knn_algorithm', required=False, default='auto', choices=['auto', 'ball_tree', 'kd_tree', 'brute'], help='algorithm used to compute nearest neighbour (default auto)')
