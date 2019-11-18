@@ -24,7 +24,7 @@ def main():
 
 def parse_own_arguments(arguments):
     parser = argparse.ArgumentParser()
-    parser.add('--attack', required=False, default=None, choices=['DoS', 'Probe'], help='select attack class to only evaluate on this attack class (default evaluate on all)')
+    parser.add('--attack', required=False, default=None, choices=['DoS', 'Probe', 'U2R_R2L'], help='select attack class to only evaluate on this attack class (default evaluate on all)')
     parser.add('--save_result', required=False, default=None, type=str, help='path to where to save result (csv)')
     options = parser.parse_args(arguments)
     return options
