@@ -6,28 +6,37 @@ import torch.optim as optim
 from torch.autograd import Variable
 
 class Generator(nn.Module):
-  def __init__(self, input_size):
+  def __init__(self, input_size, output_size):
     super(Generator, self).__init__()
 
     def block(input_dim, output_dim, normalize=True):
       layers = [nn.Linear(input_dim, output_dim)]
-      if normalize:
-        layers.append(nn.BatchNorm1d(output_dim))
+      #if normalize:
+      #  layers.append(nn.BatchNorm1d(output_dim))
       layers.append(nn.ReLU(inplace=True))
       return layers
 
     self.model = nn.Sequential(
-      *block(input_size, 1024),
-      *block(1024, 512),
-      *block(512, 256),
-      *block(256, 128),
-      nn.Linear(128, input_size),
-      nn.Tanh()
+      *block(input_size, input_size//2),
+      *block(input_size//2, input_size//2),
+      *block(input_size//2, input_size//2),
+      *block(input_size//2, input_size//2),
+      nn.Linear(input_size//2, output_size)
     )
 
   def forward(self, x):
     adv_traffic = self.model(x)
     return adv_traffic
+
+class discriminatorOutput(nn.Module):
+  def __init__(self):
+    super(discriminatorOutput, self).__init__()
+
+    self.sigmoid = nn.Sigmoid()
+
+  def forward(self, x):
+    output = (1 + self.sigmoid(x)) / 2
+    return output
 
 class Discriminator(nn.Module):
   def __init__(self, input_size):
@@ -35,27 +44,32 @@ class Discriminator(nn.Module):
 
     def block(input_dim, output_dim, normalize=True):
       layers = [nn.Linear(input_dim, output_dim)]
-      if normalize:
-        layers.append(nn.BatchNorm1d(output_dim))
-      layers.append(nn.LeakyReLU(0.2, inplace=True))
+      #if normalize:
+      #  layers.append(nn.BatchNorm1d(output_dim))
+      layers.append(nn.LeakyReLU(inplace=True))
       return layers
 
     self.model = nn.Sequential(
-      *block(input_size, 256),
-      *block(256, 512),
-      *block(512, 1024),
-      nn.Linear(1024, 1), 
+      *block(input_size, input_size*2),
+      *block(input_size*2, input_size*2),
+      *block(input_size*2, input_size*2),
+      *block(input_size*2, input_size//2),
+      nn.Linear(input_size//2, 1)
     )
+
+    self.output = discriminatorOutput()
 
   def forward(self, x):
     traffic = self.model(x)
-    return traffic
+    output = self.output(traffic)
+    return output
 
 class WGAN(object):
   def __init__(self, options, n_attributes):
     self.n_attributes = n_attributes
-    self.generator = Generator(n_attributes)
-    self.discriminator = Discriminator(n_attributes)
+    self.noise_dim = options.noise_dim
+    self.generator = Generator(self.n_attributes + self.noise_dim, self.n_attributes)
+    self.discriminator = Discriminator(self.n_attributes)
 
     self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     self.generator.to(self.device)
@@ -65,87 +79,91 @@ class WGAN(object):
     self.batch_size = options.batch_size
     self.learning_rate = options.learning_rate
     self.weight_clipping = options.weight_clipping
-    self.noise_dim = options.noise_dim
     self.critic_iter = options.critic_iter
 
     self.optim_G = optim.RMSprop(self.generator.parameters(), self.learning_rate)
     self.optim_D = optim.RMSprop(self.discriminator.parameters(), self.learning_rate)
 
-  def train(self, normal_traffic, malicious_traffic):
+  def train(self, normal_traffic, nff_traffic, normal_labels, nff_labels):
     self.generator.train()
     self.discriminator.train()
 
-    n_observations_mal = len(malicious_traffic)
+    n_observations_mal = len(nff_traffic)
     total_mal_batches = n_observations_mal // self.batch_size
+
+    n_observations_nor = len(normal_traffic)
+    total_nor_batches = n_observations_nor // self.batch_size
     
     for epoch in range(self.max_epoch):
-      input_discriminator = normal_traffic
 
-      # Generator training
-      for batch_number in range(total_mal_batches):
+      run_loss_g = 0.
+      run_loss_d = 0.
+
+      for batch_number in range(total_nor_batches):
         batch_start = batch_number * self.batch_size
         batch_finish = (batch_number + 1) * self.batch_size
-        batch_Malicious = torch.from_numpy(malicious_traffic[batch_start:batch_finish]).float() # 64*123
+        batch = torch.from_numpy(normal_traffic[batch_start:batch_finish]).float() # 64*23 for DoS
 
-        self.optim_G.zero_grad()
+        # Discriminator training
+        for c in range(self.critic_iter):
+          # With real data
+          self.optim_D.zero_grad()
 
-        noise = Variable(torch.randn(self.noise_dim, self.n_attributes))
-        batch_Malicious_noise = torch.cat((batch_Malicious, noise), 0) # 73*123
-        batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
+          batch = Variable(batch.to(self.device))
+          loss_d_real = torch.mean(self.discriminator(batch))
+          
+          # With Adversarial data
+          batch_Malicious = Variable(torch.Tensor(nff_traffic[np.random.randint(0, n_observations_mal, self.batch_size)])) # 64*23
+          noise = Variable(torch.randn(self.batch_size, self.noise_dim)) # 64*9
+          batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
+          batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
+          
+          adv_traffic = self.generator(batch_Malicious_noise)
+          loss_d_adv = torch.mean(self.discriminator(adv_traffic))
 
-        adv_traffic = self.generator(batch_Malicious_noise) # 73*123
+          loss_d = loss_d_adv - loss_d_real
+          loss_d.backward()
+          self.optim_D.step()
 
-        loss_g = self.discriminator(adv_traffic)
-        loss_g = loss_g.mean(0) 
-        loss_g.backward()
-        cost_g = -loss_g
+          run_loss_d += loss_d.item()
 
-        self.optim_G.step()
-
-        input_discriminator = np.concatenate((input_discriminator, adv_traffic.cpu().detach().numpy()), axis=0)
-
-      # Discriminator training
-      n_observations = len(input_discriminator)
-      total_batches = n_observations // self.batch_size
-
-      for batch_number in range(total_batches):
-        batch_start = batch_number * self.batch_size
-        batch_finish = (batch_number + 1) * self.batch_size
-        batch = torch.from_numpy(input_discriminator[batch_start:batch_finish]).float() # 64*123
-
-        self.optim_D.zero_grad()
-
-        for p in self.discriminator.parameters():
+          for p in self.discriminator.parameters():
             p.data.clamp_(-self.weight_clipping, self.weight_clipping)
 
-        batch = Variable(batch.to(self.device))
-        loss_d = -torch.mean(self.discriminator(batch))
-        loss_d.backward()
+        # Generator training
+        self.optim_G.zero_grad()
+
+        batch_Malicious = Variable(torch.Tensor(nff_traffic[np.random.randint(0, n_observations_mal, self.batch_size)])) # 64*23
+        noise = Variable(torch.randn(self.batch_size, self.noise_dim)) # 64*9
+        batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
+        batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
+        
+        adv_traffic = self.generator(batch_Malicious_noise) # 64*23
+        
+        loss_g = -torch.mean(self.discriminator(adv_traffic))
+        loss_g.backward()
 
         self.optim_G.step()
+
+        run_loss_g += loss_g.item()
+
+        
 
       print(
         "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
-        % (epoch, self.max_epoch, loss_d.item()*100, cost_g.item()*100)
+        % (epoch, self.max_epoch, run_loss_d/self.critic_iter, run_loss_g)
       )
      
   
-  def predict(self, malicious_traffic, labels):
+  def predict(self, normal_traffic, malicious_traffic):
     self.generator.eval()
     self.discriminator.eval()
 
-    batch = torch.from_numpy(malicious_traffic).float()
-    noise = Variable(torch.randn(self.noise_dim, self.n_attributes))
-    batch_noise = torch.cat((batch, noise), 0)
-    batch_noise = Variable(batch_noise.to(self.device))
-    labels = np.append(labels, [ True for i in range(self.noise_dim) ]).astype(np.float)
+    batch_Malicious = torch.from_numpy(malicious_traffic).float() # 64*23
+    noise = Variable(torch.randn(self.batch_size, self.noise_dim)) # 64*9
+    batch_Malicious_noise = torch.cat((batch_Malicious, noise), 1) # 64*32
+    batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
 
-    samples = self.generator(batch_noise)
-    outputs = self.discriminator(samples)
-    predictions = torch.empty_like(outputs)
-    predictions[outputs < 0] = 0
-    predictions[outputs >= 0] = 1
-    return predictions.cpu().detach().numpy(), labels
 
   def save(self, path):
     if not os.path.exists(path):

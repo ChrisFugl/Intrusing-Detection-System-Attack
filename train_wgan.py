@@ -1,16 +1,19 @@
 import configargparse
-from data import load_train, preprocess
+from data import load_train, preprocess, split_features
 from model import WGAN
 import yaml
 
 def main():
     options = parse_arguments()
-    N_attributes, _ = preprocess(load_train(), type="Normal", normalize=options.normalize)
-    M_attributes, _ = preprocess(load_train(), type="Malicious", normalize=options.normalize)
-    n_attributes = N_attributes.shape[1]
-    model = WGAN(options, n_attributes)
-    model.train(N_attributes, M_attributes)
+    functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_train(), selected_attack_class=options.attack)
+    nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
+    normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
 
+    n_attributes = nff_attributes.shape[1]
+    
+    model = WGAN(options, n_attributes)
+    model.train(normal_attributes, nff_attributes, labels_nor, labels_mal)
+    
     # save model
     if options.save_model is not None:
         model.save(options.save_model)
@@ -21,6 +24,7 @@ def parse_arguments():
     parser.add('--save_config', required=False, default=None, type=str, help='path of config file where arguments can be saved')
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
+    parser.add('--attack', required=True, default='Probe', help='selected attack')
     parse_wgan_arguments(parser)
     options = parser.parse_args()
 
