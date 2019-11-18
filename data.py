@@ -116,14 +116,12 @@ def _add_attack_class(data):
 def preprocess(dataframe, type=None, normalize=False):
     """
     Preprocesses data.
-
     Performs these operations:
     * Removes rows with attack classes: R2L, U2R.
     * Normalize numeric attributes unless specified otherwise.
     * Splits data into: attributes, attack_class.
     * One-hot encodes columns: protocol_type, service, flag, class, attack_class.
     * Makes attack class binary (in accordance with the selected attack class).
-
     :param dataframe: data
     :param normalize: flag if the numerical attributes should be normalized (default false)
     :param one_hot_encode_labels: flag if the labels should be one hot encoded (default false)
@@ -148,6 +146,9 @@ def preprocess(dataframe, type=None, normalize=False):
       - set(boolean_columns)
       - set(['difficulty_level'])
     )
+    categorical_columns = list(set(categorical_columns) & set(preprocessed.columns))
+    label_columns = list(set(label_columns) & set(preprocessed.columns))
+    boolean_columns = list(set(boolean_columns) & set(preprocessed.columns))
 
     # select only normal traffic
     # TODO: this should not be placed here
@@ -192,6 +193,39 @@ def preprocess(dataframe, type=None, normalize=False):
     attributes = attributes_dataframe.to_numpy().astype(np.float)
     return attributes, binary_attack_class
 
+def split_features(
+    dataframe,
+    selected_attack_class
+    ):
+
+    normal = dataframe[dataframe['attack_class'].isin(['Normal'])]
+    normal_ff = normal
+    normal_nff = remove_intrinsic(normal)
+
+    features = dataframe[dataframe['attack_class'].isin([selected_attack_class])]
+    functionnal_features = features
+    non_functionnal_features = remove_intrinsic(features)
+
+    # remove features based on attack class
+    if selected_attack_class == 'DoS':
+        functionnal_features = remove_content(functionnal_features)
+        functionnal_features = remove_host_based(functionnal_features)
+        non_functionnal_features = remove_host_based(non_functionnal_features)
+
+        normal_ff = remove_content(normal_ff)
+        normal_ff = remove_host_based(normal_ff)
+        normal_nff = remove_host_based(normal_nff)
+    elif selected_attack_class == 'Probe':
+        functionnal_features = remove_content(functionnal_features)
+        non_functionnal_features = remove_host_based(non_functionnal_features)
+        non_functionnal_features = remove_time_based(non_functionnal_features)
+
+        normal_ff = remove_content(normal_ff)
+        normal_nff = remove_host_base(normal_nff)
+        normal_nff = remove_time_based(normal_nff)
+
+    return functionnal_features, non_functionnal_features, normal_ff, normal_nff
+
 def get_content_columns():
     """
     Returns the content column names.
@@ -227,3 +261,9 @@ def remove_host_based(dataframe):
     Removes all host based features from the dataframe.
     """
     return dataframe.drop(columns=_HOST_BASED).reset_index(drop=True)
+
+def remove_intrinsic(dataframe):
+    """
+    Removes all host based features from the dataframe.
+    """
+    return dataframe.drop(columns=_INTRINSIC).reset_index(drop=True)

@@ -10,12 +10,16 @@ def main():
     print_scores(scores)
 
 def test(options):
-    M_attributes, labels = preprocess(load_test(), type="Malicious", normalize=options.normalize)
-    n_attributes = M_attributes.shape[1]
+    functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_test(), selected_attack_class=options.attack)
+    nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
+    normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
+
+    n_attributes = nff_attributes.shape[1]
+    
     model = WGAN(options, n_attributes)
     model.load(options.save_model)
-    predictions, labels = model.predict(M_attributes, labels)
-    return get_binary_class_scores(labels, predictions)
+    model.predict(normal_attributes, nff_attributes)
+    
 
 def print_scores(scores):
     scores = list(map(lambda score: f'{score:0.4f}', scores))
