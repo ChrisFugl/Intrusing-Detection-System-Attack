@@ -2,7 +2,7 @@ import configargparse
 from data import load_test, preprocess
 from model import WGAN
 from train_wgan import parse_arguments
-from scores import get_binary_class_scores, print_scores
+from scores import print_scores
 
 def main():
     options = parse_arguments()
@@ -15,16 +15,10 @@ def test(options):
     normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
 
     n_attributes = nff_attributes.shape[1]
-    
+
     model = WGAN(options, n_attributes)
     model.load(options.save_model)
     model.predict(normal_attributes, nff_attributes)
-    
-
-def print_scores(scores):
-    scores = list(map(lambda score: f'{score:0.4f}', scores))
-    headers = ['accuracy', 'f1', 'precision', 'recall']
-    print(tabulate([scores], headers=headers))
 
 if __name__ == '__main__':
     main()

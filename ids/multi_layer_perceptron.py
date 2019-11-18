@@ -98,12 +98,13 @@ class MultiLayerPerceptron(AbstractModel):
         loss = self.criterion(logits_tensor, labels_tensor)
         predictions = self.logits2prediction(logits_tensor)
         labels = with_cpu(labels_tensor).numpy()
-        accuracy, f1, precision, recall = get_binary_class_scores(labels, predictions)
+        accuracy, f1, precision, recall, detection_rate = get_binary_class_scores(labels, predictions)
         writer.add_scalar('loss', loss.item(), iterations)
         writer.add_scalar('scores/accuracy', accuracy, iterations)
         writer.add_scalar('scores/f1', f1, iterations)
         writer.add_scalar('scores/precision', precision, iterations)
         writer.add_scalar('scores/recall', recall, iterations)
+        writer.add_scalar('scores/detection_rate', detection_rate, iterations)
         writer.flush()
 
     def predict(self, X):
