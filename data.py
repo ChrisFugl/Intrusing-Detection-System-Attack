@@ -141,6 +141,11 @@ def preprocess(
     """
     preprocessed = dataframe
 
+    # remove attack classes: R2L, U2R
+    removed_attack_classes = ['R2L', 'U2R']
+    removed_attack_classes_index = preprocessed[preprocessed['attack_class'].isin(removed_attack_classes)].index
+    preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
+
     label_columns = ['class', 'attack_class']
     categorical_columns = ['protocol_type', 'service', 'flag']
     boolean_columns = ['land', 'logged_in', 'is_host_login', 'is_guest_login']
