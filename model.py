@@ -28,16 +28,6 @@ class Generator(nn.Module):
     adv_traffic = self.model(x)
     return adv_traffic
 
-class discriminatorOutput(nn.Module):
-  def __init__(self):
-    super(discriminatorOutput, self).__init__()
-
-    self.sigmoid = nn.Sigmoid()
-
-  def forward(self, x):
-    output = (1 + self.sigmoid(x)) / 2
-    return output
-
 class Discriminator(nn.Module):
   def __init__(self, input_size):
     super(Discriminator, self).__init__()
@@ -57,7 +47,7 @@ class Discriminator(nn.Module):
       nn.Linear(input_size//2, 1)
     )
 
-    self.output = discriminatorOutput()
+    self.output = nn.Sigmoid()
 
   def forward(self, x):
     traffic = self.model(x)
@@ -93,7 +83,7 @@ class WGAN(object):
 
     n_observations_nor = len(normal_traffic)
     total_nor_batches = n_observations_nor // self.batch_size
-    
+
     for epoch in range(self.max_epoch):
 
       run_loss_g = 0.
@@ -111,13 +101,13 @@ class WGAN(object):
 
           batch = Variable(batch.to(self.device))
           loss_d_real = torch.mean(self.discriminator(batch))
-          
+
           # With Adversarial data
           batch_Malicious = Variable(torch.Tensor(nff_traffic[np.random.randint(0, n_observations_mal, self.batch_size)])) # 64*23
           noise = Variable(torch.randn(self.batch_size, self.noise_dim)) # 64*9
           batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
           batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
-          
+
           adv_traffic = self.generator(batch_Malicious_noise)
           loss_d_adv = torch.mean(self.discriminator(adv_traffic))
 
@@ -137,9 +127,9 @@ class WGAN(object):
         noise = Variable(torch.randn(self.batch_size, self.noise_dim)) # 64*9
         batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
         batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
-        
+
         adv_traffic = self.generator(batch_Malicious_noise) # 64*23
-        
+
         loss_g = -torch.mean(self.discriminator(adv_traffic))
         loss_g.backward()
 
@@ -147,14 +137,14 @@ class WGAN(object):
 
         run_loss_g += loss_g.item()
 
-        
+
 
       print(
         "[Epoch %d/%d] [D loss: %f] [G loss: %f]"
         % (epoch, self.max_epoch, run_loss_d/self.critic_iter, run_loss_g)
       )
-     
-  
+
+
   def predict(self, normal_traffic, malicious_traffic):
     self.generator.eval()
     self.discriminator.eval()
