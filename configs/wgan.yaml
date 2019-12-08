@@ -2,9 +2,9 @@ batch_size: 128
 critic_iter: 5
 epochs: 200
 learning_rate: 0.0003
-noise_dim: 9
+noise_dim: 8
 normalize: true
 attack: DoS
-save_model: ./saved_models/
+save_model: ./saved_models/dos1
 weight_clipping: 0.01
-name: experiment1
+name: dos1
