@@ -4,8 +4,6 @@ from model import WGAN
 import os
 import yaml
 
-# TODO: infinite epochs for negative epochs
-
 def main():
     options = parse_arguments()
     functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_train(), selected_attack_class=options.attack)
@@ -57,7 +55,7 @@ def parse_arguments():
 
 def parse_wgan_arguments(parser):
     wgan_group = parser.add_argument_group('wgan')
-    wgan_group.add('--epochs', required=False, default=100, type=int, help='epochs of training (default 100)')
+    wgan_group.add('--epochs', required=False, default=100, type=int, help='epochs of training (default 100), set to -1 to continue until manually stopped')
     wgan_group.add('--batch_size', required=False, default=64, type=int, help='batch size (default 64)')
     wgan_group.add('--learning_rate', required=False, default=0.0001, type=float, help='learning rate (default 0.0001)')
     wgan_group.add('--weight_clipping', required=False, default=0.01, type=float, help='weight clipping threshold (default 0.01)')

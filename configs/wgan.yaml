@@ -2,7 +2,7 @@ batch_size: 128
 checkpoint_directory: checkpoints/
 checkpoint_interval_s: 1800
 critic_iter: 5
-epochs: 200
+epochs: -1
 learning_rate: 0.0003
 noise_dim: 8
 normalize: true

@@ -1,3 +1,4 @@
+import itertools
 import os
 import numpy as np
 from scores import get_binary_class_scores
@@ -66,7 +67,7 @@ class WGAN(object):
     self.generator.to(self.device)
     self.discriminator.to(self.device)
 
-    self.max_epoch = options.epochs
+    self.epochs = options.epochs
     self.batch_size = options.batch_size
     self.learning_rate = options.learning_rate
     self.weight_clipping = options.weight_clipping
@@ -110,7 +111,12 @@ class WGAN(object):
 
     iterations = self.start_iteration
 
-    for epoch in range(self.start_epoch, self.max_epoch):
+    if self.epochs < 0:
+        epoch_iterator = itertools.count(self.start_epoch)
+    else:
+        epoch_iterator = range(self.start_epoch, self.epochs)
+
+    for epoch in epoch_iterator:
       for batch_number in range(total_nor_batches):
         discriminated_adversarial_sum = 0.0
         discriminated_normal_sum = 0.0
@@ -209,12 +215,11 @@ class WGAN(object):
 
       print(
         "[Epoch %d/%d] [D means normal: %f] [D means adversarial: %f] {D objective: %f}"
-        % (epoch, self.max_epoch, discriminated_normal_mean_val, discriminated_adversarial_mean_val, discriminator_objective_val)
+        % (epoch, self.epochs, discriminated_normal_mean_val, discriminated_adversarial_mean_val, discriminator_objective_val)
       )
 
       current_time = time.time()
       if self.checkpoint_interval_s <= current_time - self.previous_checkpoint_time:
-        print('saving checkpoint')
         self.save_checkpoint(epoch + 1, iterations)
         self.previous_checkpoint_time = time.time()
 
