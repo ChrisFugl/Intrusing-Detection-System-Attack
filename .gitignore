@@ -9,3 +9,4 @@ runs/
 user_scripts/
 logs/
 results/
+checkpoints/

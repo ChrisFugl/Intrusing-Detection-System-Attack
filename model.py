@@ -1,6 +1,8 @@
+import itertools
 import os
 import numpy as np
 from scores import get_binary_class_scores
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -66,7 +68,7 @@ class WGAN(object):
     self.generator.to(self.device)
     self.discriminator.to(self.device)
 
-    self.max_epoch = options.epochs
+    self.epochs = options.epochs
     self.batch_size = options.batch_size
     self.learning_rate = options.learning_rate
     self.weight_clipping = options.weight_clipping
@@ -80,6 +82,16 @@ class WGAN(object):
 
     self.writer_train = SummaryWriter(log_dir=f'runs/{options.name}/train')
     self.writer_val = SummaryWriter(log_dir=f'runs/{options.name}/val')
+
+    self.start_epoch = 0
+    self.start_iteration = 0
+
+    self.checkpoint_directory = os.path.join(options.checkpoint_directory, options.name)
+    self.checkpoint_interval_s = options.checkpoint_interval_s
+    os.makedirs(self.checkpoint_directory, exist_ok=True)
+    self.previous_checkpoint_time = time.time()
+    if options.checkpoint is not None:
+        self.load_checkpoint(options.checkpoint)
 
   def train(self, trainingset, validationset):
     self.generator.train()
@@ -102,9 +114,14 @@ class WGAN(object):
     n_observations_nor = len(normal_traffic)
     total_nor_batches = n_observations_nor // self.batch_size
 
-    iterations = 0
+    iterations = self.start_iteration
 
-    for epoch in range(self.max_epoch):
+    if self.epochs < 0:
+        epoch_iterator = itertools.count(self.start_epoch)
+    else:
+        epoch_iterator = range(self.start_epoch, self.epochs)
+
+    for epoch in epoch_iterator:
       for batch_number in range(total_nor_batches):
         discriminated_adversarial_sum = 0.0
         discriminated_normal_sum = 0.0
@@ -207,9 +224,14 @@ class WGAN(object):
       self.discriminator.train()
 
       print(
-        "[Epoch %d/%d] [D mean normal: %f] [D mean adversarial: %f] {D objective: %f}"
-        % (epoch, self.max_epoch, discriminated_normal_mean_val, discriminated_adversarial_mean_val, discriminator_objective_val)
+        "[Epoch %d/%d] [D means normal: %f] [D means adversarial: %f] {D objective: %f}"
+        % (epoch, self.epochs, discriminated_normal_mean_val, discriminated_adversarial_mean_val, discriminator_objective_val)
       )
+
+      current_time = time.time()
+      if self.checkpoint_interval_s <= current_time - self.previous_checkpoint_time:
+        self.save_checkpoint(epoch + 1, iterations)
+        self.previous_checkpoint_time = time.time()
 
   def log_stats_to_tensorboard(self, writer, iterations, normal_traffic, normal_labels, malicious_traffic, malicious_labels):
       noise = torch.rand(len(malicious_traffic), self.noise_dim)
@@ -271,9 +293,9 @@ class WGAN(object):
 
     n_observations_mal = len(malicious_traffic)
 
-    batch_Malicious = torch.Tensor(malicious_traffic) 
-    noise = torch.rand(n_observations_mal, self.noise_dim) 
-    batch_Malicious_noise = torch.cat((batch_Malicious, noise), 1) 
+    batch_Malicious = torch.Tensor(malicious_traffic)
+    noise = torch.rand(n_observations_mal, self.noise_dim)
+    batch_Malicious_noise = torch.cat((batch_Malicious, noise), 1)
     batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
 
     adversarial = self.generator(batch_Malicious_noise)
@@ -289,3 +311,24 @@ class WGAN(object):
   def load(self, path):
     self.generator.load_state_dict(torch.load(path + 'generator.pt'))
     self.discriminator.load_state_dict(torch.load(path + 'discriminator.pt'))
+
+  def load_checkpoint(self, checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    self.generator.load_state_dict(checkpoint['generator'])
+    self.discriminator.load_state_dict(checkpoint['discriminator'])
+    self.optim_G.load_state_dict(checkpoint['generator_optimizer'])
+    self.optim_D.load_state_dict(checkpoint['discriminator_optimizer'])
+    self.start_epoch = checkpoint['epoch']
+    self.start_iteration = checkpoint['iteration']
+
+  def save_checkpoint(self, epoch, iteration):
+    checkpoint = {
+      'generator': self.generator.state_dict(),
+      'discriminator': self.discriminator.state_dict(),
+      'generator_optimizer': self.optim_G.state_dict(),
+      'discriminator_optimizer': self.optim_D.state_dict(),
+      'epoch': epoch,
+      'iteration': iteration,
+    }
+    checkpoint_path = os.path.join(self.checkpoint_directory, f'epoch_{epoch}.pt')
+    torch.save(checkpoint, checkpoint_path)
