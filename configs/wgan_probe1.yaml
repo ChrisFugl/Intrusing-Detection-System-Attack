@@ -1,0 +1,12 @@
+batch_size: 128
+checkpoint_directory: checkpoints/
+checkpoint_interval_s: 1800
+critic_iter: 5
+epochs: -1
+learning_rate: 0.0003
+noise_dim: 8
+normalize: true
+attack: Probe
+save_model: ./saved_models/
+weight_clipping: 0.01
+name: probe1
