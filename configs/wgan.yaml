@@ -1,6 +1,6 @@
-batch_size: 64
+batch_size: 128
 critic_iter: 5
-epochs: 100
+epochs: 200
 learning_rate: 0.0003
 noise_dim: 9
 normalize: true
