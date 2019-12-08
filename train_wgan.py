@@ -1,7 +1,10 @@
 import configargparse
 from data import load_train, load_val, preprocess, split_features
 from model import WGAN
+import os
 import yaml
+
+# TODO: infinite epochs for negative epochs
 
 def main():
     options = parse_arguments()
@@ -16,13 +19,15 @@ def main():
     normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
     n_attributes = nff_attributes.shape[1]
     validationset = (normal_attributes, nff_attributes, labels_nor, labels_mal)
-    
+
     model = WGAN(options, n_attributes)
     model.train(trainingset, validationset)
-    
+
     # save model
     if options.save_model is not None:
-        model.save(options.save_model)
+        save_model_directory = os.path.join(options.save_model, options.name)
+        os.makedirs(save_model_directory, exist_ok=True)
+        model.save(save_model_directory)
 
 def parse_arguments():
     parser = configargparse.ArgParser(config_file_parser_class=configargparse.YAMLConfigFileParser)
@@ -32,6 +37,9 @@ def parse_arguments():
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
     parser.add('--attack', required=True, default='Probe', help='selected attack')
     parser.add('--name', required=True, type=str, help='Unique name of the experiment.')
+    parser.add('--checkpoint', required=False, type=str, default=None, help='path to load checkpoint from')
+    parser.add('--checkpoint_directory', required=False, type=str, default='checkpoints/', help='path to checkpoints directory (default: checkpoints/)')
+    parser.add('--checkpoint_interval_s', required=False, type=int, default=1800, help='seconds between saving checkpoints (default 1800)')
     parse_wgan_arguments(parser)
     options = parser.parse_args()
 
