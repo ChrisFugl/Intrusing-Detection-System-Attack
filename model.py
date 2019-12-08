@@ -47,7 +47,8 @@ class Discriminator(nn.Module):
       *block(256, 256),
       *block(256, 256),
       *block(256, 256),
-      nn.Linear(256, 1)
+      nn.Linear(256, 1),
+      nn.Sigmoid()
     )
 
   def forward(self, x):
@@ -85,10 +86,14 @@ class WGAN(object):
     self.discriminator.train()
 
     normal_traffic, nff_traffic, normal_labels, nff_labels = trainingset
+    normal_labels = 1 - normal_labels
+    nff_labels = 1 - nff_labels
     malicious_traffic_tensor = torch.Tensor(nff_traffic)
     normal_traffic_tensor = torch.Tensor(normal_traffic)
 
     normal_traffic_val, nff_traffic_val, normal_labels_val, nff_labels_val = validationset
+    normal_labels_val = 1 - normal_labels_val
+    nff_labels_val = 1 - nff_labels_val
     malicious_traffic_val_tensor = torch.Tensor(nff_traffic_val)
     normal_traffic_val_tensor = torch.Tensor(normal_traffic_val)
 
@@ -103,7 +108,6 @@ class WGAN(object):
       for batch_number in range(total_nor_batches):
         discriminated_adversarial_sum = 0.0
         discriminated_normal_sum = 0.0
-        discriminator_objective_sum = 0.0
 
         batch_start = batch_number * self.batch_size
         batch_finish = (batch_number + 1) * self.batch_size
@@ -131,14 +135,16 @@ class WGAN(object):
           # With Adversarial data
           discriminated_adversarial = torch.mean(self.discriminator(adversarial_traffic)).view(1)
 
+          discriminator_loss = - (discriminated_normal - discriminated_adversarial)
+
           self.optim_D.zero_grad()
-          discriminated_normal.backward(self.one)
-          discriminated_adversarial.backward(self.negative_one)
+          #discriminated_normal.backward(self.one)
+          #discriminated_adversarial.backward(self.negative_one)
+          discriminator_loss.backward()
           self.optim_D.step()
 
           discriminated_adversarial_sum += discriminated_adversarial.item()
           discriminated_normal_sum += discriminated_normal.item()
-          discriminator_objective_sum += (discriminated_normal - discriminated_adversarial).item()
 
           for p in self.discriminator.parameters():
             p.data.clamp_(-self.weight_clipping, self.weight_clipping)
@@ -157,18 +163,20 @@ class WGAN(object):
         adversarial_traffic = self.generator(batch_Malicious_noise) # 64*23
 
         generator_objective = torch.mean(self.discriminator(adversarial_traffic)).view(1)
+        generator_loss = - generator_objective
 
         self.optim_G.zero_grad()
-        generator_objective.backward(self.one)
+        generator_loss.backward()
         self.optim_G.step()
 
         discriminated_adversarial_avg = discriminated_adversarial_sum / self.critic_iter
         discriminated_normal_avg = discriminated_normal_sum / self.critic_iter
-        discriminator_objective_avg = discriminator_objective_sum / self.critic_iter
+        discriminator_objective_avg = discriminated_normal_avg - discriminated_adversarial_avg
 
         self.writer_train.add_scalar('discriminator/adversarial_mean', discriminated_adversarial_avg, iterations)
         self.writer_train.add_scalar('discriminator/normal_mean', discriminated_normal_avg, iterations)
         self.writer_train.add_scalar('discriminator/objective', discriminator_objective_avg, iterations)
+        self.writer_train.add_scalar('generator/objective', generator_objective.item(), iterations)
 
         iterations += 1
 
@@ -182,7 +190,7 @@ class WGAN(object):
         malicious_traffic_tensor,
         nff_labels
       )
-      discriminated_adversarial_mean_val, discriminated_normal_mean_val, discriminator_objective_val = self.log_stats_to_tensorboard(
+      discriminated_adversarial_mean_val, discriminated_normal_mean_val, discriminator_objective_val, generator_objective_val = self.log_stats_to_tensorboard(
         self.writer_val,
         iterations,
         normal_traffic_val_tensor,
@@ -190,14 +198,16 @@ class WGAN(object):
         malicious_traffic_val_tensor,
         nff_labels_val
       )
-      self.writer_val.add_scalar('discriminator/adversarial_mean', discriminated_adversarial_avg, iterations)
-      self.writer_val.add_scalar('discriminator/normal_mean', discriminated_normal_avg, iterations)
-      self.writer_val.add_scalar('discriminator/objective', discriminator_objective_avg, iterations)
+      self.writer_val.add_scalar('discriminator/adversarial_mean', discriminated_adversarial_mean_val, iterations)
+      self.writer_val.add_scalar('discriminator/normal_mean', discriminated_normal_mean_val, iterations)
+      self.writer_val.add_scalar('discriminator/objective', discriminator_objective_val, iterations)
+      self.writer_train.add_scalar('generator/objective', generator_objective_val, iterations)
+
       self.generator.train()
       self.discriminator.train()
 
       print(
-        "[Epoch %d/%d] [D means normal: %f] [D means adversarial: %f] {D objective: %f}"
+        "[Epoch %d/%d] [D mean normal: %f] [D mean adversarial: %f] {D objective: %f}"
         % (epoch, self.max_epoch, discriminated_normal_mean_val, discriminated_adversarial_mean_val, discriminator_objective_val)
       )
 
@@ -208,7 +218,8 @@ class WGAN(object):
 
       discriminated_adversarial_mean = torch.mean(self.discriminator(adversarial_traffic))
       discriminated_normal_mean = torch.mean(self.discriminator(normal_traffic))
-      discriminator_objective = discriminated_adversarial_mean - discriminated_normal_mean
+      discriminator_objective = discriminated_normal_mean - discriminated_adversarial_mean
+      generator_objective = discriminated_adversarial_mean
 
       predictions_adversarial = self.predict(adversarial_traffic)
       accuracy, f1, precision, recall, _ = get_binary_class_scores(malicious_labels, predictions_adversarial)
@@ -224,13 +235,13 @@ class WGAN(object):
       writer.add_scalar('scores_normal/precision', precision, iterations)
       writer.add_scalar('scores_normal/recall', recall, iterations)
 
-      return discriminated_adversarial_mean, discriminated_normal_mean, discriminator_objective
+      return discriminated_adversarial_mean, discriminated_normal_mean, discriminator_objective, generator_objective
 
   def predict(self, traffic):
     outputs = self.discriminator(traffic).squeeze()
     predictions = torch.empty((len(outputs),), dtype=torch.uint8)
-    predictions[outputs < 0] = 1   # adversarial traffic
-    predictions[outputs >= 0] = 0  # normal traffic
+    predictions[outputs < 0.5] = 0   # adversarial traffic
+    predictions[outputs >= 0.5] = 1  # normal traffic
     return predictions.numpy()
 
   def predict_normal_and_adversarial(self, normal_traffic, malicious_traffic):
@@ -250,22 +261,24 @@ class WGAN(object):
     outputs = self.discriminator(input_disc)
 
     predictions = torch.empty_like(outputs)
-    predictions[outputs < 0] =  1
-    predictions[outputs >= 0] = 0
+    predictions[outputs < 0.5] =  0
+    predictions[outputs >= 0.5] = 1
     return predictions.cpu().numpy()
 
-  def generate(self, malicious_traffic, type):
+  def generate(self, malicious_traffic):
     self.generator.eval()
     self.discriminator.eval()
 
-    n_observation_mal = len(malicious_traffic)
+    n_observations_mal = len(malicious_traffic)
 
-    batch_Malicious = torch.from_numpy(malicious_traffic).float()
-    noise = Variable(torch.rand(n_observation_mal, self.noise_dim))
-    batch_Malicious_noise = torch.cat((batch_Malicious, noise), 1)
+    batch_Malicious = torch.Tensor(malicious_traffic) 
+    noise = torch.rand(n_observations_mal, self.noise_dim) 
+    batch_Malicious_noise = torch.cat((batch_Malicious, noise), 1) 
     batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
 
     adversarial = self.generator(batch_Malicious_noise)
+
+    return adversarial
 
   def save(self, path):
     if not os.path.exists(path):
