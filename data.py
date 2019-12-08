@@ -180,11 +180,11 @@ def preprocess(dataframe, normalize=False, remove_classes=['R2L', 'U2R']):
     # split into (attributes, attack_class) and remove class from attributes
     attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class', 'difficulty_level'])
     attack_class_dataframe = preprocessed['attack_class']
-    #print(attack_class_dataframe)
+    #print(attributes_dataframe.iloc[0])
 
     # one-hot encoding
     attributes_dataframe = pd.get_dummies(attributes_dataframe, columns=categorical_columns)
-    #print(attributes_dataframe[0])
+    #print(attributes_dataframe.iloc[0])
 
     # make attack class binary (0 = normal, 1 = malicious)
     binary_attack_class = np.zeros_like(attack_class_dataframe, dtype=np.bool)
