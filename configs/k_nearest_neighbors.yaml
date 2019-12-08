@@ -1,4 +1,6 @@
 algorithm: knn
+knn_algorithm: auto
+knn_weights: distance
 normalize: True
-save_model: saved_models/k_nearest_neighbors.pkl
 n_neighbors: 10
+save_model: saved_models/k_nearest_neighbors.pkl

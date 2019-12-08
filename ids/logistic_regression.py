@@ -3,9 +3,9 @@ from sklearn import linear_model
 
 class LogisticRegression(AbstractModel):
 
-    def __init__(self, max_iter=1000):
+    def __init__(self, max_iter=1000, solver='lbfgs'):
         self.classifier = linear_model.LogisticRegression(
-        multi_class='multinomial',
-        solver='lbfgs',
+        multi_class='ovr',
+        solver=solver,
         max_iter=max_iter
     )

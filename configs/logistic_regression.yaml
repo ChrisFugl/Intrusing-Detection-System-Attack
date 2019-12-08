@@ -1,4 +1,5 @@
 algorithm: lr
+iterations: 1000
 normalize: True
+lr_solver: liblinear
 save_model: saved_models/logistic_regression.pkl
-iterations: 100

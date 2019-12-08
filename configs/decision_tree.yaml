@@ -1,10 +1,8 @@
 algorithm: dt
-iterations: 1000
 max_depth: null
 min_samples_leaf: 1
 min_samples_split: 2
-n_neighbors: 5
-n_trees: 10
 normalize: true
 save_model: saved_models/decision_tree.pkl
+splitter: best
 split_criterion: gini

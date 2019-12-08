@@ -16,15 +16,11 @@ def test(options):
     normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
 
     n_attributes = nff_attributes.shape[1]
-    
+
     model = WGAN(options, n_attributes)
     model.load(options.save_model)
-    #print(non_functional_features.shape)
-    #print(nff_attributes.shape)
     predictions = model.predict_normal_and_adversarial(normal_attributes, nff_attributes)
-    #print(predictions.shape)
     labels = np.concatenate((labels_nor, labels_mal), axis=0)
-    #print(labels.shape)
     return get_binary_class_scores(labels, predictions)
 
 def test_ids(options):

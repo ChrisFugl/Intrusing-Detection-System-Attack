@@ -1,3 +1,4 @@
 algorithm: svm
+iterations: 10000
 normalize: True
 save_model: saved_models/support_vector_machine.pkl

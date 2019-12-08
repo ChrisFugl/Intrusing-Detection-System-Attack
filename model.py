@@ -112,7 +112,7 @@ class WGAN(object):
           noise = Variable(torch.rand(self.batch_size, self.noise_dim)) # 64*9
           batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
           batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
-          
+
           adv_traffic = self.generator(batch_Malicious_noise)
 
           # With real data
@@ -137,9 +137,9 @@ class WGAN(object):
         noise = Variable(torch.rand(self.batch_size, self.noise_dim)) # 64*9
         batch_Malicious_noise = Variable(torch.cat((batch_Malicious, noise), 1)) # 64*32
         batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
-        
+
         adv_traffic = self.generator(batch_Malicious_noise) # 64*23
-        
+
         loss_g = -torch.mean(self.discriminator(adv_traffic))
 
         self.optim_G.zero_grad()
@@ -233,12 +233,6 @@ class WGAN(object):
     batch_Malicious_noise = Variable(batch_Malicious_noise.to(self.device))
 
     adversarial = self.generator(batch_Malicious_noise)
-
-
-
-
-
-
 
   def save(self, path):
     if not os.path.exists(path):

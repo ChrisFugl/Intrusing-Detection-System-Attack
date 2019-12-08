@@ -114,38 +114,23 @@ def _add_attack_class(data):
     data['attack_class'] = column
     return data
 
-def preprocess(
-        dataframe,
-        type=None,
-        normalize=False,
-        selected_attack_class=None,
-    ):
+def preprocess(dataframe, normalize=False, remove_classes=['R2L', 'U2R']):
     """
     Preprocesses data.
     Performs these operations:
-    * Removes features based on selected_attack_class
-    * Removes rows with attack classes: U2R.
+    * Removes rows with attack classes specified in argument: (default R2L, U2R).
     * Normalize numeric attributes unless specified otherwise.
     * Splits data into: attributes, attack_class.
     * One-hot encodes columns: protocol_type, service, flag, class, attack_class.
     * Makes attack class binary (in accordance with the selected attack class).
     :param dataframe: data
-    :type dataframe: pd.DataFrame
-    :param selected_attack_class: features are selected based on this (default to not removing any features)
-    :type selected_attack_class: dos, probe, r2l
     :param normalize: flag if the numerical attributes should be normalized (default false)
-    :type normalize: bool
     :param one_hot_encode_labels: flag if the labels should be one hot encoded (default false)
-    :type one_hot_encode_labels: bool
+    :param remove_classes: rows with one of these attack classes will be removed (default ['R2L', 'U2R'])
     :return: attributes, binary attack class
     :rtype: (ndarray, ndarray)
     """
     preprocessed = dataframe
-
-    # remove attack classes: R2L, U2R
-    removed_attack_classes = ['R2L', 'U2R']
-    removed_attack_classes_index = preprocessed[preprocessed['attack_class'].isin(removed_attack_classes)].index
-    preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
 
     label_columns = ['class', 'attack_class']
     categorical_columns = ['protocol_type', 'service', 'flag']
@@ -162,15 +147,10 @@ def preprocess(
     label_columns = list(set(label_columns) & set(preprocessed.columns))
     boolean_columns = list(set(boolean_columns) & set(preprocessed.columns))
 
-    # select only normal traffic
-    if type == "Normal":
-        removed_attack_classes = ['DoS', 'R2L', 'U2R', 'Probe']
-        removed_attack_classes_index = dataframe[dataframe['attack_class'].isin(removed_attack_classes)].index
-        preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
-    elif type == "Malicious":
-        removed_attack_classes = ['Normal', 'U2R']
-        removed_attack_classes_index = preprocessed[preprocessed['attack_class'].isin(removed_attack_classes)].index
-        preprocessed = preprocessed.drop(index=removed_attack_classes_index).reset_index(drop=True)
+    # remove attack classes
+    if len(remove_classes) != 0:
+        removed_classes_index = preprocessed[preprocessed['attack_class'].isin(remove_classes)].index
+        preprocessed = preprocessed.drop(index=removed_classes_index).reset_index(drop=True)
 
     #attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class', 'difficulty_level'])
     #attack_class_dataframe = preprocessed['attack_class']
@@ -208,20 +188,13 @@ def preprocess(
 
     # make attack class binary (0 = normal, 1 = malicious)
     binary_attack_class = np.zeros_like(attack_class_dataframe, dtype=np.bool)
-    if selected_attack_class is not None:
-        binary_attack_class[attack_class_dataframe == selected_attack_class] = 1
-    else:
-        binary_attack_class[attack_class_dataframe != 'Normal'] = 1
+    binary_attack_class[attack_class_dataframe != 'Normal'] = 1
 
     attributes = attributes_dataframe.to_numpy().astype(np.float)
     #attributes = attributes_dataframe.astype(np.float)
     return attributes, binary_attack_class
 
-def split_features(
-    dataframe,
-    selected_attack_class
-    ):
-
+def split_features(dataframe, selected_attack_class):
     normal = dataframe[dataframe['attack_class'].isin(['Normal'])]
     normal_ff = normal
     normal_nff = remove_intrinsic(normal)
