@@ -1,7 +1,8 @@
 import configargparse
-from data import load_test, preprocess
+from data import load_test, preprocess, split_features
 from model import WGAN
 from train_wgan import parse_arguments
+import numpy as np
 from scores import get_binary_class_scores, print_scores
 
 def main():
@@ -18,13 +19,24 @@ def test(options):
     
     model = WGAN(options, n_attributes)
     model.load(options.save_model)
-    model.predict(normal_attributes, nff_attributes)
-    
+    #print(non_functional_features.shape)
+    #print(nff_attributes.shape)
+    predictions = model.predict_normal_and_adversarial(normal_attributes, nff_attributes)
+    #print(predictions.shape)
+    labels = np.concatenate((labels_nor, labels_mal), axis=0)
+    #print(labels.shape)
+    return get_binary_class_scores(labels, predictions)
 
-def print_scores(scores):
-    scores = list(map(lambda score: f'{score:0.4f}', scores))
-    headers = ['accuracy', 'f1', 'precision', 'recall']
-    print(tabulate([scores], headers=headers))
+def test_ids(options):
+    functional_features, non_functional_features, _, _ = split_features(load_test(), selected_attack_class=options.attack)
+    nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
+    
+    n_attributes = nff_attributes.shape[1]
+
+    model = WGAN(options, n_attributes)
+    model.load(options.save_model)
+    adversarial = model.generate(nff_attributes)
+
 
 if __name__ == '__main__':
     main()

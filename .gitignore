@@ -5,3 +5,4 @@ env/
 __pycache__/
 *.pyc
 saved_models/
+runs/

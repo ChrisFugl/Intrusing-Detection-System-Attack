@@ -1,5 +1,5 @@
 import configargparse
-from data import load_train, preprocess, split_features
+from data import load_train, load_val, preprocess, split_features
 from model import WGAN
 import yaml
 
@@ -8,11 +8,17 @@ def main():
     functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_train(), selected_attack_class=options.attack)
     nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
     normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
-
     n_attributes = nff_attributes.shape[1]
+    trainingset = (normal_attributes, nff_attributes, labels_nor, labels_mal)
+
+    functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_val(), selected_attack_class=options.attack)
+    nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
+    normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
+    n_attributes = nff_attributes.shape[1]
+    validationset = (normal_attributes, nff_attributes, labels_nor, labels_mal)
     
     model = WGAN(options, n_attributes)
-    model.train(normal_attributes, nff_attributes, labels_nor, labels_mal)
+    model.train(trainingset, validationset)
     
     # save model
     if options.save_model is not None:
@@ -25,6 +31,7 @@ def parse_arguments():
     parser.add('--save_model', required=False, default=None, type=str, help='path of file to save trained model')
     parser.add('--normalize', required=False, action='store_true', default=False, help='normalize data (default false)')
     parser.add('--attack', required=True, default='Probe', help='selected attack')
+    parser.add('--name', required=True, type=str, help='Unique name of the experiment.')
     parse_wgan_arguments(parser)
     options = parser.parse_args()
 
