@@ -2,6 +2,7 @@ from functools import partial
 import numpy as np
 from operator import itemgetter
 import pandas as pd
+from sklearn import preprocessing
 
 # features
 _INTRINSIC = [
@@ -151,7 +152,12 @@ def preprocess(dataframe, normalize=False, remove_classes=['R2L', 'U2R']):
         removed_classes_index = preprocessed[preprocessed['attack_class'].isin(remove_classes)].index
         preprocessed = preprocessed.drop(index=removed_classes_index).reset_index(drop=True)
 
+    #attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class', 'difficulty_level'])
+    #attack_class_dataframe = preprocessed['attack_class']
+    #print(attributes_dataframe.iloc[0])
+
     # normalize
+    
     if normalize:
         # laod trainingset since the numeric columns should be standardized in accordance with the trainingset,
         # and we do not know if the dataframe represents the trainingset
@@ -168,19 +174,24 @@ def preprocess(dataframe, normalize=False, remove_classes=['R2L', 'U2R']):
 
         preprocessed[zero_std_columns] = 0
         preprocessed[non_zero_std_columns] = (preprocessed[non_zero_std_columns] - mean[non_zero_std_columns]) / std[non_zero_std_columns]
+        #min_max_scaler = preprocessing.MinMaxScaler()
+        #attributes_dataframe = min_max_scaler.fit_transform(attributes_dataframe)
 
     # split into (attributes, attack_class) and remove class from attributes
-    attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class'])
+    attributes_dataframe = preprocessed.drop(columns=['class', 'attack_class', 'difficulty_level'])
     attack_class_dataframe = preprocessed['attack_class']
+    #print(attack_class_dataframe)
 
     # one-hot encoding
     attributes_dataframe = pd.get_dummies(attributes_dataframe, columns=categorical_columns)
+    #print(attributes_dataframe[0])
 
     # make attack class binary (0 = normal, 1 = malicious)
     binary_attack_class = np.zeros_like(attack_class_dataframe, dtype=np.bool)
     binary_attack_class[attack_class_dataframe != 'Normal'] = 1
 
     attributes = attributes_dataframe.to_numpy().astype(np.float)
+    #attributes = attributes_dataframe.astype(np.float)
     return attributes, binary_attack_class
 
 def split_features(dataframe, selected_attack_class):
@@ -189,6 +200,9 @@ def split_features(dataframe, selected_attack_class):
     normal_nff = remove_intrinsic(normal)
 
     features = dataframe[dataframe['attack_class'].isin([selected_attack_class])]
+    #test = len(dataframe[dataframe['attack_class'].isin([selected_attack_class])])
+    #print(features.iloc[0])
+    #print(features.shape)
     functionnal_features = features
     non_functionnal_features = remove_intrinsic(features)
 
@@ -196,18 +210,20 @@ def split_features(dataframe, selected_attack_class):
     if selected_attack_class == 'DoS':
         functionnal_features = remove_content(functionnal_features)
         functionnal_features = remove_host_based(functionnal_features)
-        non_functionnal_features = remove_host_based(non_functionnal_features)
+        non_functionnal_features = remove_time_based(non_functionnal_features)
+        test = len(non_functionnal_features)
+        #print(non_functionnal_features.shape)
 
         normal_ff = remove_content(normal_ff)
         normal_ff = remove_host_based(normal_ff)
-        normal_nff = remove_host_based(normal_nff)
+        normal_nff = remove_time_based(normal_nff)
     elif selected_attack_class == 'Probe':
         functionnal_features = remove_content(functionnal_features)
         non_functionnal_features = remove_host_based(non_functionnal_features)
         non_functionnal_features = remove_time_based(non_functionnal_features)
 
         normal_ff = remove_content(normal_ff)
-        normal_nff = remove_host_base(normal_nff)
+        normal_nff = remove_host_based(normal_nff)
         normal_nff = remove_time_based(normal_nff)
 
     return functionnal_features, non_functionnal_features, normal_ff, normal_nff
