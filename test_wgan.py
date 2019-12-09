@@ -55,7 +55,7 @@ def test_ids(options):
 
     tester = get_tester(options.attack, data, labels)
     results = list(map(tester, IDS_CONFIGS))
-    save_results(results, 'results/output.csv')
+    save_results(results, f'results/{options.name}.csv')
     print_results(results)
 
 def reassemble(type, adversarial_nff, adversarial_ff, normal_nff, normal_ff):
