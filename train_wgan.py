@@ -39,7 +39,6 @@ def parse_arguments():
     parser.add('--checkpoint_directory', required=False, type=str, default='checkpoints/', help='path to checkpoints directory (default: checkpoints/)')
     parser.add('--checkpoint_interval_s', required=False, type=int, default=1800, help='seconds between saving checkpoints (default: 1800)')
     parser.add('--evaluate', required=False, type=int, default=200, help='number of epochs between evaluating on validation set (default: 200)')
-    parser.add('--checkpoint_path', required=False, type=str, default=None, help='path to load the desired checkpoint')
     parse_wgan_arguments(parser)
     options = parser.parse_args()
 

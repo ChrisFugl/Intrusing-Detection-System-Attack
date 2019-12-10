@@ -24,12 +24,10 @@ class Generator(nn.Module):
       return layers
 
     self.model = nn.Sequential(
-      *block(input_size, 256),
-      *block(256, 256),
-      *block(256, 256),
-      *block(256, 256),
-      nn.Linear(256, output_size),
-      nn.ReLU()
+      *block(input_size, 128),
+      *block(128, 128),
+      *block(128, 128),
+      nn.Linear(128, output_size),
     )
 
   def forward(self, x):
@@ -50,11 +48,10 @@ class Discriminator(nn.Module):
       return layers
 
     self.model = nn.Sequential(
-      *block(input_size, 256),
-      *block(256, 256),
-      *block(256, 256),
-      *block(256, 256),
-      nn.Linear(256, 1)
+      *block(input_size, 128),
+      *block(128, 128),
+      *block(128, 128),
+      nn.Linear(128, 1)
     )
 
   def forward(self, x):
