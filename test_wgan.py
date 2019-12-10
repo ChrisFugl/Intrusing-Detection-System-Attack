@@ -1,13 +1,11 @@
-import configargparse
 import ids
-import torch
 from data import load_test, preprocess, split_features
 from model import WGAN
 from train_wgan import parse_arguments
 import numpy as np
 import pandas as pd
+from scores import get_binary_class_scores
 from tabulate import tabulate
-from scores import get_binary_class_scores, print_scores
 from test_ids import parse_arguments as parse_test_ids_arguments
 
 IDS_CONFIGS = [
@@ -22,21 +20,7 @@ IDS_CONFIGS = [
 
 def main():
     options = parse_arguments()
-    scores = test_ids(options)
-
-def test(options):
-    functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_test(), selected_attack_class=options.attack)
-    nff_attributes, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
-    normal_attributes, labels_nor = preprocess(normal_nff, normalize=options.normalize)
-
-    n_attributes = nff_attributes.shape[1]
-
-    save_model_directory = os.path.join(options.save_model, options.name)
-    model = WGAN(options, n_attributes)
-    model.load(save_model_directory)
-    predictions = model.predict_normal_and_adversarial(normal_attributes, nff_attributes)
-    labels = np.concatenate((labels_nor, labels_mal), axis=0)
-    return get_binary_class_scores(labels, predictions)
+    test_ids(options)
 
 def test_ids(options):
     functional_features, non_functional_features, normal_ff, normal_nff = split_features(load_test(), selected_attack_class=options.attack)
@@ -44,17 +28,12 @@ def test_ids(options):
     adversarial_nff, labels_mal = preprocess(non_functional_features, normalize=options.normalize)
     nor_nff, labels_nor = preprocess(normal_nff, normalize=options.normalize)
     nor_ff, _ = preprocess(normal_ff, normalize=options.normalize)
-
     n_attributes = adversarial_nff.shape[1]
-
     model = WGAN(options, n_attributes)
-    #model.load(options.save_model)
-    model.load_checkpoint(options.checkpoint_path)
+    model.load_checkpoint(options.checkpoint)
     adversarial = model.generate(adversarial_nff).detach()
-
     data = reassemble(options.attack, adversarial, adversarial_ff, nor_nff, nor_ff)
     labels = np.concatenate((labels_mal, labels_nor), axis=0)
-
     tester = get_tester(options.attack, data, labels)
     results = list(map(tester, IDS_CONFIGS))
     save_results(results, f'results/{options.name}.csv')
@@ -81,7 +60,7 @@ def reassemble(type, adversarial_nff, adversarial_ff, normal_nff, normal_ff):
         time_based = adversarial_ff[:,6:15]
         host_based = adversarial_ff[:,15:25]
         categorical = adversarial_ff[:,25:]
-        frame = np.concatenate((intrinsic, content, time_based, host_based, categorical), axis=1)
+        adversarial_traffic = np.concatenate((intrinsic, content, time_based, host_based, categorical), axis=1)
 
         intrinsic_normal = normal_ff[:,:6]
         content_normal = normal_nff[:,:13]
