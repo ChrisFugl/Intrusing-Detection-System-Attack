@@ -49,7 +49,7 @@ def test_ids(options):
 
     model = WGAN(options, n_attributes)
     #model.load(options.save_model)
-    model.load_checkpoint('checkpoints/dos1/epoch_1472.pt')
+    model.load_checkpoint(options.checkpoint_path)
     adversarial = model.generate(adversarial_nff).detach()
 
     data = reassemble(options.attack, adversarial, adversarial_ff, nor_nff, nor_ff)

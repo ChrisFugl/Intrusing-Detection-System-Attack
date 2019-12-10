@@ -9,4 +9,5 @@ normalize: true
 attack: DoS
 save_model: ./saved_models/
 weight_clipping: 0.01
-name: dos1
+name: dos3
+checkpoint_path: checkpoints/dos1/epoch_1472.pt
