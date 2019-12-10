@@ -1,5 +1,6 @@
 import configargparse
 import ids
+import torch
 from data import load_test, preprocess, split_features
 from model import WGAN
 from train_wgan import parse_arguments
@@ -47,7 +48,8 @@ def test_ids(options):
     n_attributes = adversarial_nff.shape[1]
 
     model = WGAN(options, n_attributes)
-    model.load(options.save_model)
+    #model.load(options.save_model)
+    model.load_checkpoint('checkpoints/dos1/epoch_1472.pt')
     adversarial = model.generate(adversarial_nff).detach()
 
     data = reassemble(options.attack, adversarial, adversarial_ff, nor_nff, nor_ff)
